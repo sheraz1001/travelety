@@ -28,7 +28,7 @@
       </div>
       <div class="box"><h3>More for your trip</h3>
         <a class="li" href="{{ $d->guideUrl() }}">{{ $d->city }} travel guide <span>→</span></a>
-        @if(\App\Services\Links::partner('transfers')) <a class="li" href="{{ route('go.partner','transfers') }}" rel="nofollow sponsored">Airport transfer <span>→</span></a> @endif
+        @if(\App\Services\Links::partner('transfers')) <a class="li" href="{{ route('transfers.city', \Illuminate\Support\Str::slug($d->city)) }}">Airport transfer <span>→</span></a> @endif
         @if(\App\Services\Links::partner('tours')) <a class="li" href="{{ route('go.partner','tours') }}" rel="nofollow sponsored">Things to do <span>→</span></a> @endif
       </div>
     </aside>

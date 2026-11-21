@@ -35,7 +35,7 @@ class WriteDestinations extends Command
                 $this->error('✗ '.$d->city.': '.$e->getMessage());
             }
         }
-        Cache::forget('sitemap.destinations');
+        Cache::forget('sitemap.v2.destinations');
 
         return self::SUCCESS;
     }

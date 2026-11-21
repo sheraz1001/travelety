@@ -42,6 +42,12 @@ class GoController extends Controller
 
     public function partner(Request $r, string $key)
     {
+        if ($key === 'esim') {
+            return redirect()->route('esim.index');
+        }
+        if ($key === 'transfers') {
+            return redirect()->route('transfers.index');
+        }
         $url = Links::partner($key);
         $this->log('partner', $key, $r);
 

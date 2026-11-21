@@ -24,6 +24,14 @@ Route::get('/blog/feed', [SiteController::class, 'feed'])->name('blog.feed');
 Route::get('/blog/category/{category}', [SiteController::class, 'blog'])->name('blog.category');
 Route::get('/blog/{slug}', [SiteController::class, 'post'])->name('blog.show');
 
+Route::get('/esim', [\App\Http\Controllers\EsimController::class, 'index'])->name('esim.index');
+Route::get('/esim/{slug}', [\App\Http\Controllers\EsimController::class, 'show'])->name('esim.show');
+Route::get('/go/esim/{plan}', [\App\Http\Controllers\EsimController::class, 'go'])->whereNumber('plan')->name('esim.go');
+
+Route::get('/transfers', [\App\Http\Controllers\TransferController::class, 'index'])->name('transfers.index');
+Route::get('/transfers/book', [\App\Http\Controllers\TransferController::class, 'book'])->name('transfers.book');
+Route::get('/transfers/{city}', [\App\Http\Controllers\TransferController::class, 'index'])->name('transfers.city');
+
 Route::get('/go/flights', [GoController::class, 'flights'])->name('go.flights');
 Route::get('/go/hotels', [GoController::class, 'hotels'])->name('go.hotels');
 Route::get('/go/{key}', [GoController::class, 'partner'])->whereIn('key', ['transfers', 'tours', 'esim', 'cars', 'insurance', 'compensation', 'hotels'])->name('go.partner');

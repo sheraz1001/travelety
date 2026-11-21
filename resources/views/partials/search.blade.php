@@ -75,7 +75,7 @@
   ]; @endphp
   @foreach($svc as $k => [$h,$p,$b])
     @if(in_array($k,$show))
-    <div class="panel {{ $tab === $k ? 'active' : '' }}" data-name="{{ $k }}"><div class="service-cta"><p><b>{{ $h }}</b> {{ $p }}</p><a class="btn" href="{{ route('go.partner', $k) }}" rel="nofollow sponsored">{{ $b }}</a></div></div>
+    <div class="panel {{ $tab === $k ? 'active' : '' }}" data-name="{{ $k }}"><div class="service-cta"><p><b>{{ $h }}</b> {{ $p }}</p><a class="btn" href="{{ $k === 'esim' ? route('esim.index') : ($k === 'transfers' ? route('transfers.index') : route('go.partner', $k)) }}" @if(!in_array($k,['esim','transfers'])) rel="nofollow sponsored" @endif>{{ $b }}</a></div></div>
     @endif
   @endforeach
 </div>

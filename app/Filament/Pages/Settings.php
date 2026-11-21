@@ -64,6 +64,11 @@ class Settings extends Page implements HasSchemas
                 Select::make('ai_provider')->label('AI provider')->options(['anthropic' => 'Anthropic (Claude)', 'openai' => 'OpenAI']),
                 TextInput::make('ai_model')->label('AI model'),
                 TextInput::make('ai_api_key')->label('AI API key')->password()->revealable()->columnSpanFull(),
+                TextInput::make('gettransfer_token')->label('GetTransfer API token')->password()->revealable()
+                    ->helperText('Request from support@travelpayouts.com. Enables live transfer prices.'),
+                TextInput::make('gettransfer_api_base')->label('GetTransfer API host'),
+                TextInput::make('tp_project_id')->label('Project ID (for eSIM links)'),
+                TextInput::make('link_gettransfer')->label('GetTransfer booking link')->url(),
             ]),
             Section::make('Content automation')->columns(4)->schema([
                 Toggle::make('blog_auto_publish')->label('Auto-publish posts that pass QC')->inline(false)->columnSpan(2),

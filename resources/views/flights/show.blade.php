@@ -76,6 +76,7 @@
         </div>
       @endif
 
+      @include('partials.esim-box', ['country' => $to->country])
       <div class="prose" style="margin-top:20px">
         @if($route->content)
           {!! $route->content !!}
@@ -107,9 +108,9 @@
         <h3>Plan your {{ $to->city }} trip</h3>
         @if($guide || \App\Services\Links::hotelsEnabled())<a class="li" href="{{ $guide ? $guide->hotelsUrl() : route('go.hotels', ['city'=>$to->city]) }}">Hotels in {{ $to->city }} <span>→</span></a>@endif
         @if($guide)<a class="li" href="{{ $guide->guideUrl() }}">{{ $to->city }} travel guide <span>→</span></a>@endif
-        @if(\App\Services\Links::partner('transfers')) <a class="li" href="{{ route('go.partner','transfers') }}" rel="nofollow sponsored">Airport transfer <span>→</span></a> @endif
+        @if(\App\Services\Links::partner('transfers')) <a class="li" href="{{ route('transfers.city', $to->city_slug) }}">{{ $to->city }} airport transfer <span>→</span></a> @endif
         @if(\App\Services\Links::partner('tours')) <a class="li" href="{{ route('go.partner','tours') }}" rel="nofollow sponsored">Tours & tickets <span>→</span></a> @endif
-        @if(\App\Services\Links::partner('esim')) <a class="li" href="{{ route('go.partner','esim') }}" rel="nofollow sponsored">eSIM for {{ $to->country }} <span>→</span></a> @endif
+        @if(\App\Services\Links::partner('esim')) <a class="li" href="{{ route('esim.index') }}">eSIM for {{ $to->country }} <span>→</span></a> @endif
         @if(\App\Services\Links::partner('insurance')) <a class="li" href="{{ route('go.partner','insurance') }}" rel="nofollow sponsored">Travel insurance <span>→</span></a> @endif
       </div>
       @if($return)

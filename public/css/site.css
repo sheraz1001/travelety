@@ -291,3 +291,37 @@ footer{background:#0a1522;color:rgba(255,255,255,.7);padding:70px 0 30px;font-si
   .months span{display:none}
   .weather{grid-template-columns:repeat(4,1fr)}
 }
+
+/* ---------- eSIM ---------- */
+.esim-search{display:flex;align-items:center;gap:12px;background:#fff;border-radius:18px;padding:6px 8px 6px 20px;max-width:720px;box-shadow:var(--shadow);color:var(--muted)}
+.esim-search svg{width:22px;height:22px;flex:none}
+.esim-search input{flex:1;border:0;outline:0;font:500 17px Inter;padding:16px 6px;color:var(--ink);background:transparent}
+.esim-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.esim-dest{border:1px solid var(--line);border-radius:var(--r);padding:20px;background:#fff;display:flex;flex-direction:column;gap:6px;transition:all .2s}
+.esim-dest:hover{border-color:var(--sea);transform:translateY(-3px);box-shadow:var(--shadow)}
+.esim-dest b{font-size:18px}
+.esim-dest span{font-size:13px;color:var(--muted)}
+.esim-dest em{font-style:normal;font-weight:700;color:var(--sun);margin-top:8px}
+.esim-dest em small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.chip b{color:var(--sea);font-weight:600;margin-left:4px}
+.esim-filters{display:grid;gap:4px;margin-bottom:10px}
+.esim-filters .tabs-links{margin-bottom:10px}
+.esim-filters .tabs-links a{padding:8px 14px;font-size:13px}
+.plans{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.plan{border:1px solid var(--line);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:14px;background:#fff;transition:box-shadow .2s}
+.plan:hover{box-shadow:var(--shadow)}
+.plan-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.plan-data{font-family:Fraunces,serif;font-size:28px;display:block;line-height:1.1}
+.plan-days{color:var(--muted);font-size:14px}
+.plan-meta{display:flex;flex-wrap:wrap;gap:6px}
+.plan-meta span{font-size:12px;background:var(--sky);color:var(--sea);padding:4px 10px;border-radius:999px;font-weight:600}
+.plan-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:auto}
+.plan-price{font-size:22px;display:block}
+.plan-bottom small{color:var(--muted);font-size:12px}
+.plan-bottom .btn{min-height:46px;padding:0 20px;font-size:15px}
+.esim-box{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;background:linear-gradient(135deg,#e8f4f6,#fff1eb);border-radius:var(--r);padding:22px 24px;margin:26px 0}
+.esim-box b{font-size:18px;display:block}
+.esim-box span{color:var(--muted);font-size:14px}
+.esim-box .btn{min-height:48px}
+@media (max-width:1020px){.esim-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:720px){.esim-grid,.plans{grid-template-columns:1fr}}

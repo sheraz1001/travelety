@@ -40,7 +40,7 @@ class UpdateFares extends Command
             usleep(250000); // stay well inside API rate limits
         }
 
-        Cache::forget('sitemap.flights');
+        Cache::forget('sitemap.v2.flights');
         $this->info("Updated {$routes->count()} routes, {$found} with fares.");
 
         return self::SUCCESS;

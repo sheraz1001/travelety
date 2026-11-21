@@ -64,7 +64,7 @@ class DailyBlog extends Command
                 $this->error('Failed "'.$t->keyword.'": '.$e->getMessage());
             }
         }
-        Cache::forget('sitemap.blog');
+        Cache::forget('sitemap.v2.blog');
 
         return self::SUCCESS;
     }

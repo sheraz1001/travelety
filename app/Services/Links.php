@@ -22,6 +22,9 @@ class Links
 
     public static function partner(string $key): ?string
     {
+        if ($key === 'esim' && \App\Models\EsimPlan::query()->exists()) {
+            return route('esim.index');
+        }
         $url = Setting::get('link_'.$key);
 
         return $url ?: null;

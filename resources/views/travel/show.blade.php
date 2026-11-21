@@ -28,6 +28,7 @@
       @if($d->weather)
         <div class="weather">@foreach($d->weather as $w)<div>{{ $w['month'] ?? '' }}<b>{{ $w['avg_high_c'] ?? '' }}°</b></div>@endforeach</div>
       @endif
+      @include('partials.esim-box', ['country' => $d->country])
       @if($d->visa_uae)<h2>Visa for UAE residents</h2><p>{{ $d->visa_uae }}</p>@endif
       @if($d->things_to_do)
         <h2>Top things to do in {{ $d->city }}</h2>
