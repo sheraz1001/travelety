@@ -8,16 +8,26 @@ use RuntimeException;
 /** Thin client for the AI model that drafts content. Provider and model are set in .env. */
 class AiWriter
 {
+    protected function cfg(): array
+    {
+        $c = config('travelety.ai');
+        $c['key'] = $c['key'] ?: \App\Models\Setting::get('ai_api_key');
+        $c['provider'] = \App\Models\Setting::get('ai_provider') ?: $c['provider'];
+        $c['model'] = \App\Models\Setting::get('ai_model') ?: $c['model'];
+
+        return $c;
+    }
+
     public function enabled(): bool
     {
-        return (bool) config('travelety.ai.key');
+        return (bool) $this->cfg()['key'];
     }
 
     public function text(string $system, string $prompt, ?int $maxTokens = null): string
     {
-        $cfg = config('travelety.ai');
+        $cfg = $this->cfg();
         if (! $cfg['key']) {
-            throw new RuntimeException('AI_API_KEY is not set in .env');
+            throw new RuntimeException('AI key missing: add it in Admin → Site settings');
         }
         $max = $maxTokens ?? $cfg['max_tokens'];
 

@@ -57,6 +57,14 @@ class Settings extends Page implements HasSchemas
                 TextInput::make('link_insurance')->label('Travel insurance')->url(),
                 TextInput::make('link_compensation')->label('Flight compensation')->url(),
             ]),
+            Section::make('Integrations (private)')->description('Kept on the server only, never shown on the website.')->columns(2)->schema([
+                TextInput::make('fares_api_token')->label('Fare data API token')->password()->revealable()
+                    ->helperText('Travelpayouts → Profile → API token'),
+                TextInput::make('affiliate_marker')->label('Partner ID (marker)')->helperText('Your account ID, e.g. 402214'),
+                Select::make('ai_provider')->label('AI provider')->options(['anthropic' => 'Anthropic (Claude)', 'openai' => 'OpenAI']),
+                TextInput::make('ai_model')->label('AI model'),
+                TextInput::make('ai_api_key')->label('AI API key')->password()->revealable()->columnSpanFull(),
+            ]),
             Section::make('Content automation')->columns(4)->schema([
                 Toggle::make('blog_auto_publish')->label('Auto-publish posts that pass QC')->inline(false)->columnSpan(2),
                 TextInput::make('blog_posts_per_day')->numeric()->minValue(0)->maxValue(5),

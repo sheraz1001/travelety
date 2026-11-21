@@ -28,6 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->registration(\App\Filament\Pages\Auth\FirstAdminRegister::class)
             ->brandName('Travelety Admin')
             ->navigationGroups(['Content', 'Audience', 'Data', 'Settings'])
             ->favicon(asset('favicon.svg'))

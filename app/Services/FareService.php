@@ -17,7 +17,7 @@ class FareService
 {
     protected function get(string $path, array $query): array
     {
-        $token = config('travelety.data_api_token');
+        $token = config('travelety.data_api_token') ?: Setting::get('fares_api_token');
         if (! $token) {
             return [];
         }

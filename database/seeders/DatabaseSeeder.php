@@ -8,7 +8,6 @@ use App\Models\Destination;
 use App\Models\FlightRoute;
 use App\Models\Setting;
 use App\Models\Topic;
-use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -16,12 +15,6 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Admin user (change the password after first login)
-        User::firstOrCreate(['email' => env('ADMIN_EMAIL', 'admin@travelety.com')], [
-            'name' => 'Travelety Admin',
-            'password' => bcrypt(env('ADMIN_PASSWORD', Str::random(20))),
-        ]);
-
         foreach (Setting::DEFAULTS as $k => $v) {
             Setting::firstOrCreate(['key' => $k], ['value' => $v]);
         }

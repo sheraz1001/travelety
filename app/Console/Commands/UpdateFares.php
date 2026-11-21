@@ -15,8 +15,8 @@ class UpdateFares extends Command
 
     public function handle(FareService $fares): int
     {
-        if (! config('travelety.data_api_token')) {
-            $this->error('FARES_API_TOKEN is missing in .env');
+        if (! (config('travelety.data_api_token') ?: \App\Models\Setting::get('fares_api_token'))) {
+            $this->error('Fare API token missing: add it in Admin → Site settings');
 
             return self::FAILURE;
         }
