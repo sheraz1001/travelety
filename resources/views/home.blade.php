@@ -158,7 +158,7 @@
     <div class="seo">
       <h2>Explore more on {{ \App\Models\Setting::get('site_name') }}</h2>
       <div class="cols">
-        <div><h5>Top flight routes</h5>@foreach($routes->take(6) as $r)<a href="{{ $r->url() }}">{{ $r->origin()?->city }} to {{ $r->destination()?->city }}</a>@endforeach</div>
+        @if($routes->count())<div><h5>Top flight routes</h5>@foreach($routes->take(6) as $r)<a href="{{ $r->url() }}">{{ $r->origin()?->city }} to {{ $r->destination()?->city }}</a>@endforeach</div>@else<div><h5>More destinations</h5>@foreach(['rome'=>'Rome','bali'=>'Bali','singapore'=>'Singapore','sydney'=>'Sydney','cairo'=>'Cairo','toronto'=>'Toronto'] as $sl=>$c)<a href="{{ route('flights.to',$sl) }}">Flights to {{ $c }}</a>@endforeach</div>@endif
         <div><h5>Flights to</h5>@foreach(['london'=>'London','paris'=>'Paris','istanbul'=>'Istanbul','bangkok'=>'Bangkok','tokyo'=>'Tokyo','new-york'=>'New York'] as $sl=>$c)<a href="{{ route('flights.to',$sl) }}">Flights to {{ $c }}</a>@endforeach</div>
         <div><h5>eSIM by country</h5>@foreach(['turkey'=>'Turkey','japan'=>'Japan','united-states'=>'USA','united-kingdom'=>'UK','thailand'=>'Thailand','saudi-arabia'=>'Saudi Arabia'] as $sl=>$c)<a href="{{ route('esim.show',$sl) }}">{{ $c }} eSIM</a>@endforeach</div>
         <div><h5>Regional eSIM</h5>@foreach(['europe'=>'Europe','asia'=>'Asia','middle-east-and-north-africa'=>'Middle East','latin-america'=>'Latin America','africa'=>'Africa','world'=>'Global'] as $sl=>$c)<a href="{{ route('esim.show',$sl) }}">{{ $c }} eSIM</a>@endforeach</div>
