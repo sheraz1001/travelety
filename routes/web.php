@@ -36,6 +36,14 @@ Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap')
 Route::get('/sitemap-{type}.xml', [SitemapController::class, 'show'])->name('sitemap.show');
 Route::get('/robots.txt', [SitemapController::class, 'robots']);
 
+// Serves uploads when the host does not allow the public/storage symlink
+Route::get('/storage/{path}', function (string $path) {
+    $disk = \Illuminate\Support\Facades\Storage::disk('public');
+    abort_unless(! str_contains($path, '..') && $disk->exists($path), 404);
+
+    return response()->file($disk->path($path), ['Cache-Control' => 'public, max-age=2592000']);
+})->where('path', '.*');
+
 Route::get('/_setup/{task}', \App\Http\Controllers\SetupController::class)->middleware('throttle:20,1');
 
 Route::get('/{slug}', [SiteController::class, 'page'])->whereIn('slug', ['about', 'contact', 'privacy', 'terms'])->name('page');

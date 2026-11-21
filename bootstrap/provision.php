@@ -41,8 +41,12 @@ if (! file_exists($env)) {
 
 // public/storage -> uploads folder (recreated if a redeploy removed it)
 $link = $base.'/public/storage';
-if (! is_link($link) && ! file_exists($link)) {
-    @symlink("$data/storage/app/public", $link);
+if (! is_link($link) && ! file_exists($link) && function_exists('symlink')) {
+    try {
+        @symlink("$data/storage/app/public", $link);
+    } catch (\Throwable) {
+        // symlink disabled on this host: /storage/* is served by a route instead
+    }
 }
 
 define('TRAVELETY_DATA', $data);
