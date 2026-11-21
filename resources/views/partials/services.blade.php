@@ -8,6 +8,7 @@
 ]; @endphp
 <div class="services">
  @foreach($items as [$k,$ic,$h,$p,$m])
+  @continue($k === 'hotels' ? ! \App\Services\Links::hotelsEnabled() : ! \App\Services\Links::partner($k))
   <a class="svc" href="{{ $k === 'hotels' && isset($city) ? route('go.hotels', ['city'=>$city]) : route('go.partner', $k) }}" rel="nofollow sponsored"><div class="ic">@include('partials.icon',['n'=>$ic])</div><h3>{{ $h }}{{ isset($city) && in_array($k,['hotels','transfers','tours']) ? ' in '.$city : '' }}</h3><p>{{ $p }}</p><span class="more">{{ $m }} →</span></a>
  @endforeach
 </div>

@@ -30,6 +30,9 @@ class GoController extends Controller
 
     public function hotels(Request $r)
     {
+        if (! Links::hotelsEnabled()) {
+            return redirect()->route('hotels.index');
+        }
         $city = trim((string) $r->query('city', ''));
         $this->log('hotels', $city ?: null, $r);
         $date = fn ($v) => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $v) ? $v : null;

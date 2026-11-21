@@ -32,7 +32,7 @@
       @if($d->things_to_do)
         <h2>Top things to do in {{ $d->city }}</h2>
         <div class="areas">@foreach($d->things_to_do as $t)<div class="area"><b>{{ $t['name'] ?? '' }}</b><p>{{ $t['description'] ?? '' }}</p></div>@endforeach</div>
-        <p><a href="{{ route('go.partner','tours') }}" rel="nofollow sponsored">Book tours and tickets in {{ $d->city }} →</a></p>
+        @if(\App\Services\Links::partner('tours')) <p><a href="{{ route('go.partner','tours') }}" rel="nofollow sponsored">Book tours and tickets in {{ $d->city }} →</a></p> @endif
       @endif
       {!! $d->guide_content !!}
       <h2>Plan the rest of your {{ $d->city }} trip</h2>
@@ -41,7 +41,7 @@
       <div class="box"><h3>Flights to {{ $d->city }}</h3>
         @forelse($routes as $r)<a class="li" href="{{ $r->url() }}">From {{ $r->origin()?->city }} <span>{{ $r->min_price ? \App\Services\Links::money($r->min_price) : '→' }}</span></a>@empty<a class="li" href="{{ route('go.flights',['to'=>$d->iata]) }}" rel="nofollow">Search flights <span>→</span></a>@endforelse
       </div>
-      <div class="box"><h3>Stay</h3><a class="li" href="{{ $d->hotelsUrl() }}">Where to stay in {{ $d->city }} <span>→</span></a><a class="btn" href="{{ route('go.hotels',['city'=>$d->city]) }}" rel="nofollow">Compare hotels</a></div>
+      <div class="box"><h3>Stay</h3><a class="li" href="{{ $d->hotelsUrl() }}">Where to stay in {{ $d->city }} <span>→</span></a>@if(\App\Services\Links::hotelsEnabled())<a class="btn" href="{{ route('go.hotels',['city'=>$d->city]) }}" rel="nofollow">Compare hotels</a>@endif</div>
     </aside>
   </div>
   <div class="wrap" style="margin-top:20px">@include('partials.services', ['city' => $d->city])</div>

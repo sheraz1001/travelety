@@ -66,17 +66,17 @@
       <div><h4>Search</h4>
         <a href="{{ route('flights.index') }}">Flights</a>
         <a href="{{ route('hotels.index') }}">Hotels</a>
-        <a href="{{ route('go.partner', 'transfers') }}" rel="nofollow">Transfers</a>
-        <a href="{{ route('go.partner', 'cars') }}" rel="nofollow">Car rental</a>
+        @if(\App\Services\Links::partner('transfers'))<a href="{{ route('go.partner', 'transfers') }}" rel="nofollow">Transfers</a>@endif
+        @if(\App\Services\Links::partner('cars'))<a href="{{ route('go.partner', 'cars') }}" rel="nofollow">Car rental</a>@endif
         <a href="{{ route('flights.from', 'dubai') }}">Flights from Dubai</a>
         <a href="{{ route('flights.from', 'abu-dhabi') }}">Flights from Abu Dhabi</a>
         <a href="{{ route('flights.from', 'sharjah') }}">Flights from Sharjah</a>
       </div>
       <div><h4>Trip extras</h4>
-        <a href="{{ route('go.partner', 'tours') }}" rel="nofollow">Tours & tickets</a>
-        <a href="{{ route('go.partner', 'esim') }}" rel="nofollow">Travel eSIM</a>
-        <a href="{{ route('go.partner', 'insurance') }}" rel="nofollow">Insurance</a>
-        <a href="{{ route('go.partner', 'compensation') }}" rel="nofollow">Flight compensation</a>
+        @if(\App\Services\Links::partner('tours'))<a href="{{ route('go.partner', 'tours') }}" rel="nofollow">Tours & tickets</a>@endif
+        @if(\App\Services\Links::partner('esim'))<a href="{{ route('go.partner', 'esim') }}" rel="nofollow">Travel eSIM</a>@endif
+        @if(\App\Services\Links::partner('insurance'))<a href="{{ route('go.partner', 'insurance') }}" rel="nofollow">Insurance</a>@endif
+        @if(\App\Services\Links::partner('compensation'))<a href="{{ route('go.partner', 'compensation') }}" rel="nofollow">Flight compensation</a>@endif
         <a href="{{ route('blog.index') }}">Travel blog</a>
       </div>
       <div><h4>{{ $site }}</h4>

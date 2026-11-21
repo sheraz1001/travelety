@@ -27,6 +27,11 @@ class Links
         return $url ?: null;
     }
 
+    public static function hotelsEnabled(): bool
+    {
+        return (bool) Setting::get('link_hotels');
+    }
+
     public static function hotels(?string $city = null, ?string $in = null, ?string $out = null, int $adults = 2): string
     {
         $base = Setting::get('link_hotels') ?: rtrim(Setting::get('search_domain'), '/').'/hotels';

@@ -105,12 +105,12 @@
       </div>
       <div class="box">
         <h3>Plan your {{ $to->city }} trip</h3>
-        <a class="li" href="{{ $guide ? $guide->hotelsUrl() : route('go.hotels', ['city'=>$to->city]) }}">Hotels in {{ $to->city }} <span>→</span></a>
+        @if($guide || \App\Services\Links::hotelsEnabled())<a class="li" href="{{ $guide ? $guide->hotelsUrl() : route('go.hotels', ['city'=>$to->city]) }}">Hotels in {{ $to->city }} <span>→</span></a>@endif
         @if($guide)<a class="li" href="{{ $guide->guideUrl() }}">{{ $to->city }} travel guide <span>→</span></a>@endif
-        <a class="li" href="{{ route('go.partner','transfers') }}" rel="nofollow sponsored">Airport transfer <span>→</span></a>
-        <a class="li" href="{{ route('go.partner','tours') }}" rel="nofollow sponsored">Tours & tickets <span>→</span></a>
-        <a class="li" href="{{ route('go.partner','esim') }}" rel="nofollow sponsored">eSIM for {{ $to->country }} <span>→</span></a>
-        <a class="li" href="{{ route('go.partner','insurance') }}" rel="nofollow sponsored">Travel insurance <span>→</span></a>
+        @if(\App\Services\Links::partner('transfers')) <a class="li" href="{{ route('go.partner','transfers') }}" rel="nofollow sponsored">Airport transfer <span>→</span></a> @endif
+        @if(\App\Services\Links::partner('tours')) <a class="li" href="{{ route('go.partner','tours') }}" rel="nofollow sponsored">Tours & tickets <span>→</span></a> @endif
+        @if(\App\Services\Links::partner('esim')) <a class="li" href="{{ route('go.partner','esim') }}" rel="nofollow sponsored">eSIM for {{ $to->country }} <span>→</span></a> @endif
+        @if(\App\Services\Links::partner('insurance')) <a class="li" href="{{ route('go.partner','insurance') }}" rel="nofollow sponsored">Travel insurance <span>→</span></a> @endif
       </div>
       @if($return)
       <div class="box"><h3>Flying back?</h3><a class="li" href="{{ $return->url() }}">{{ $to->city }} → {{ $from->city }} <span>→</span></a></div>

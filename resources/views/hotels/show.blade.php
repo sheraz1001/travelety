@@ -19,7 +19,7 @@
         <div class="areas">@foreach($d->areas as $a)<div class="area"><small>{{ ucfirst($a['budget'] ?? '') }}</small><b>{{ $a['name'] ?? '' }}</b><p>{{ $a['description'] ?? '' }}</p></div>@endforeach</div>
       @endif
       {!! $d->hotels_content !!}
-      <p><a class="btn" style="display:inline-flex;text-decoration:none;color:#fff" href="{{ route('go.hotels', ['city'=>$d->city]) }}" rel="nofollow">Compare hotels in {{ $d->city }}</a></p>
+      @if(\App\Services\Links::hotelsEnabled())<p><a class="btn" style="display:inline-flex;text-decoration:none;color:#fff" href="{{ route('go.hotels', ['city'=>$d->city]) }}" rel="nofollow">Compare hotels in {{ $d->city }}</a></p>@endif
       @include('partials.faqs', ['faqs' => collect($d->faqs ?? [])->take(4)->all(), 'heading' => "Hotels in {$d->city}: FAQs"])
     </article>
     <aside class="sidebar">
@@ -28,8 +28,8 @@
       </div>
       <div class="box"><h3>More for your trip</h3>
         <a class="li" href="{{ $d->guideUrl() }}">{{ $d->city }} travel guide <span>→</span></a>
-        <a class="li" href="{{ route('go.partner','transfers') }}" rel="nofollow sponsored">Airport transfer <span>→</span></a>
-        <a class="li" href="{{ route('go.partner','tours') }}" rel="nofollow sponsored">Things to do <span>→</span></a>
+        @if(\App\Services\Links::partner('transfers')) <a class="li" href="{{ route('go.partner','transfers') }}" rel="nofollow sponsored">Airport transfer <span>→</span></a> @endif
+        @if(\App\Services\Links::partner('tours')) <a class="li" href="{{ route('go.partner','tours') }}" rel="nofollow sponsored">Things to do <span>→</span></a> @endif
       </div>
     </aside>
   </div>

@@ -3,7 +3,8 @@
   $from = strtoupper($from ?? \App\Models\Setting::get('default_origin'));
   $to = strtoupper($to ?? '');
   $city = $city ?? '';
-  $show = $show ?? ['flights','hotels','transfers','tours','esim','cars'];
+  $show = array_values(array_filter($show ?? ['flights','hotels','transfers','tours','esim','cars'], fn($t) => $t === 'flights' || ($t === 'hotels' ? \App\Services\Links::hotelsEnabled() : \App\Services\Links::partner($t))));
+  $tab = in_array($tab, $show) ? $tab : 'flights';
   $labels = ['flights'=>['Flights','plane'],'hotels'=>['Hotels','hotel'],'transfers'=>['Transfers','car'],'tours'=>['Tours','compass'],'esim'=>['eSIM','sim'],'cars'=>['Car rental','key']];
   $fromA = \App\Models\Airport::byCode($from); $toA = $to ? \App\Models\Airport::byCode($to) : null;
 @endphp
