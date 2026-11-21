@@ -58,7 +58,7 @@
       </div>
     @endif
 
-    <div class="sec-head" style="margin-top:{{ ($result || $error || $to) ? '70px' : '0' }}"><div><span class="eyebrow">Popular airports</span><h2>Transfers at airports UAE travellers use most</h2></div></div>
+    <div class="sec-head" style="margin-top:{{ ($result || $error || $to) ? '70px' : '0' }}"><div><span class="eyebrow">Popular airports</span><h2>Transfers at the world's busiest airports</h2></div></div>
     <div class="esim-grid">
       @foreach($popular as $a)
         <a class="esim-dest" href="{{ route('transfers.city', $a->city_slug) }}"><b>{{ $a->city }}</b><span>{{ $a->name }} ({{ $a->iata }})</span><em>Private transfers →</em></a>

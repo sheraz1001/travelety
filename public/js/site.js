@@ -118,3 +118,12 @@
   // Fare month bars: click to search that month
   $$('.months .bar[data-href]').forEach(b => b.addEventListener('click', () => location.href = b.dataset.href));
 })();
+
+(function(){
+  var h=document.getElementById('hdr');
+  if(h)addEventListener('scroll',function(){h.classList.toggle('stuck',scrollY>40)},{passive:true});
+  var els=document.querySelectorAll('.rv');
+  if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('in')});return}
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.08});
+  els.forEach(function(e){io.observe(e)});
+})();

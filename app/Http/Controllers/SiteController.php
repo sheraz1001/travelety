@@ -13,23 +13,36 @@ class SiteController extends Controller
 {
     public function home()
     {
-        $routes = FlightRoute::published()->whereIn('origin_iata', ['DXB', 'AUH', 'SHJ'])
-            ->orderBy('priority')->limit(8)->get();
+        $routes = FlightRoute::published()->orderBy('priority')->limit(9)->get();
 
-        $featured = Destination::whereIn('iata', ['IST', 'MLE', 'TBS', 'BKK', 'BAK', 'JED', 'LHR'])->get()
-            ->sortBy(fn ($d) => array_search($d->iata, ['IST', 'MLE', 'TBS', 'BKK', 'BAK', 'JED', 'LHR']))->values();
+        $order = ['IST', 'NRT', 'CDG', 'DPS', 'LHR', 'BKK', 'SYD', 'JFK'];
+        $featured = Destination::whereIn('iata', $order)->get()
+            ->sortBy(fn ($d) => array_search($d->iata, $order))->values();
+
+        $esimGroups = [];
+        foreach ([
+            'Popular countries' => ['turkey', 'united-kingdom', 'united-states', 'saudi-arabia', 'egypt', 'france'],
+            'Regional' => ['europe', 'asia', 'middle-east-and-north-africa', 'latin-america', 'africa', 'world'],
+            'Asia' => ['japan', 'thailand', 'indonesia', 'india', 'singapore', 'malaysia'],
+        ] as $label => $slugs) {
+            $rows = \App\Models\EsimPlan::whereIn('slug', $slugs)
+                ->selectRaw('slug, max(name) as name, count(*) as plans, min(price_usd) as from_price, sum(case when data_gb is null then 1 else 0 end) as unlimited')
+                ->groupBy('slug')->get()->keyBy('slug');
+            $esimGroups[$label] = collect($slugs)->map(fn ($sl) => $rows[$sl] ?? null)->filter()->values();
+        }
+        $esimCount = \App\Models\EsimPlan::distinct()->count('slug');
 
         $posts = Post::live()->with('category')->latest('published_at')->limit(3)->get();
 
         $faqs = [
-            ['q' => 'Do I book with '.config('app.name').'?', 'a' => 'We are a travel search and comparison site. Once you find a deal, you complete your booking directly with the airline, hotel or travel agency you chose. They issue your ticket, take your payment and handle any changes.'],
+            ['q' => 'Do I book with '.\App\Models\Setting::get('site_name').'?', 'a' => 'We are a travel search and comparison site. Once you find a deal, you complete your booking directly with the airline, hotel or travel agency you chose. They issue your ticket, take your payment and handle any changes.'],
             ['q' => 'Do you charge any fees?', 'a' => 'No. Searching and comparing is completely free, and we never add anything to the price. We may earn a small commission from our partners when you book, at no extra cost to you.'],
             ['q' => 'Why did the price change when I clicked through?', 'a' => 'Fares update constantly and seats at a given price can sell out. We show the most recent prices available, but the final price is always confirmed on the provider\'s page before you pay.'],
             ['q' => 'Who do I contact about my booking?', 'a' => 'Your booking confirmation comes from the company you booked with. Contact them for changes, cancellations, refunds or baggage questions, using the details in your confirmation email.'],
             ['q' => 'Can I find cheap Umrah flights here?', 'a' => 'Yes. Search for flights to Jeddah (JED) or Madinah (MED) from your city. Fares for Ramadan and school holidays rise early, so book ahead or set a price alert.'],
         ];
 
-        return view('home', compact('routes', 'featured', 'posts', 'faqs'));
+        return view('home', compact('routes', 'featured', 'posts', 'faqs', 'esimGroups', 'esimCount'));
     }
 
     public function flights()

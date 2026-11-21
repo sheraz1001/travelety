@@ -13,7 +13,7 @@
     </div>
     <div class="hero-trust">
       <span>@include('partials.icon',['n'=>'check','sw'=>2.2])No roaming bills</span>
-      <span>@include('partials.icon',['n'=>'check','sw'=>2.2])Keep your UAE number for WhatsApp &amp; 2FA</span>
+      <span>@include('partials.icon',['n'=>'check','sw'=>2.2])Keep your home number for WhatsApp &amp; 2FA</span>
       <span>@include('partials.icon',['n'=>'check','sw'=>2.2])Plans from US${{ number_format($cheapest ?? 4.5, 2) }}</span>
     </div>
   </div>
@@ -23,7 +23,7 @@
   <div class="wrap">
     <div id="esimResults" class="chips" style="display:none;margin-bottom:40px"></div>
 
-    <div class="sec-head"><div><span class="eyebrow">Popular from the UAE</span><h2>Most-searched eSIM destinations</h2></div><p>Prices are for the cheapest plan available. Tap a destination to compare every plan.</p></div>
+    <div class="sec-head"><div><span class="eyebrow">Popular right now</span><h2>Most-searched eSIM destinations</h2></div><p>Prices are for the cheapest plan available. Tap a destination to compare every plan.</p></div>
     <div class="esim-grid">
       @foreach($popular as $d)
         <a class="esim-dest" href="{{ route('esim.show', $d->slug) }}">
@@ -71,7 +71,7 @@
     <div class="steps">
       <div class="step"><h3>Pick a plan</h3><p>Choose your destination, how much data you need and for how many days.</p></div>
       <div class="step"><h3>Install before you fly</h3><p>Buy and scan the QR code while you're still on Wi-Fi at home. It takes about two minutes.</p></div>
-      <div class="step"><h3>Land and connect</h3><p>Switch to the eSIM for data when you arrive. Your UAE SIM stays in for calls, WhatsApp and bank codes.</p></div>
+      <div class="step"><h3>Land and connect</h3><p>Switch to the eSIM for data when you arrive. Your home SIM stays in for calls, WhatsApp and bank codes.</p></div>
     </div>
   </div>
 </section>
@@ -80,7 +80,7 @@
   <div class="wrap faq">
     @include('partials.faqs', ['faqs' => [
       ['q' => 'What is a travel eSIM?', 'a' => 'An eSIM is a digital SIM card built into your phone. A travel eSIM gives you a local data plan for your destination without buying a physical SIM or paying roaming charges.'],
-      ['q' => 'Will I keep my UAE number?', 'a' => 'Yes. Your normal SIM stays active, so you can still receive calls, SMS and verification codes. Most travel eSIMs are data-only, so you use the eSIM for internet and your UAE line for calls and texts.'],
+      ['q' => 'Will I keep my home number?', 'a' => 'Yes. Your normal SIM stays active, so you can still receive calls, SMS and verification codes. Most travel eSIMs are data-only, so you use the eSIM for internet and your home line for calls and texts.'],
       ['q' => 'When does the validity period start?', 'a' => 'For most plans, validity starts when the eSIM first connects to a network in the covered country, not when you buy it. Check the details on each plan before you buy.'],
       ['q' => 'Who do I buy the eSIM from?', 'a' => 'You complete your purchase with our eSIM partner, who delivers the eSIM by email and in their app and handles support and top-ups.'],
     ]])

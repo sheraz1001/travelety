@@ -7,7 +7,7 @@
     ['q' => "How much does an eSIM for {$name} cost?", 'a' => "Plans for {$name} start from US$".number_format($min, 2)." (about AED ".number_format($min * \App\Models\EsimPlan::USD_TO_AED).") for ".$plans->first()->data_label." valid for ".$plans->first()->days." days. There are ".$plans->count()." plans to choose from".($plans->contains(fn($p)=>$p->isUnlimited()) ? ', including unlimited data.' : '.')],
     ['q' => "Which network will I use in {$name}?", 'a' => $info['networks'] ? "Plans connect to {$info['networks']}." : "The plan connects to local partner networks in {$name}."],
     ['q' => 'Can I top up?', 'a' => $info['top_ups'] ? 'Yes, top-ups are available, so you can add more data without installing a new eSIM.' : 'Top-ups may not be available for every plan. Check the plan details before you buy.'],
-    ['q' => 'Does the eSIM include calls and SMS?', 'a' => $info['voice'] ? 'Some plans include calls and texts as well as data. Look for the "Calls & SMS" label.' : 'These plans are data-only. You can still call and message using WhatsApp, FaceTime and other apps, and your UAE SIM stays active for SMS codes.'],
+    ['q' => 'Does the eSIM include calls and SMS?', 'a' => $info['voice'] ? 'Some plans include calls and texts as well as data. Look for the "Calls & SMS" label.' : 'These plans are data-only. You can still call and message using WhatsApp, FaceTime and other apps, and your home SIM stays active for SMS codes.'],
     ['q' => 'When should I install it?', 'a' => 'Install the eSIM while you are still on Wi-Fi before you travel, then switch it on for data when you land.'],
   ];
 @endphp
@@ -72,7 +72,7 @@
         <ul>
           <li><strong>Network:</strong> {{ $info['networks'] ?? 'Local partner networks' }}.</li>
           <li><strong>Validity:</strong> on most plans the validity period starts when the eSIM first connects to a network in its coverage area, not when you buy it.</li>
-          <li><strong>Your UAE number:</strong> keep your normal SIM active for calls, SMS and bank verification codes; use the eSIM for data.</li>
+          <li><strong>Your home number:</strong> keep your normal SIM active for calls, SMS and bank verification codes; use the eSIM for data.</li>
           @if($info['top_ups'])<li><strong>Top-ups:</strong> available, so you can add data without a new eSIM.</li>@endif
         </ul>
         @if($info['other'])<p>{{ $info['other'] }}</p>@endif
