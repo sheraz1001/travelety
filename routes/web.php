@@ -16,6 +16,7 @@ Route::get('/flights-to/{city}', [SiteController::class, 'flightsTo'])->name('fl
 Route::get('/hotels', [SiteController::class, 'hotels'])->name('hotels.index');
 Route::controller(\App\Http\Controllers\HotelBookingController::class)->group(function () {
     Route::get('/hotels/search', 'search')->name('hotels.search');
+    Route::get('/hotels/search.json', 'searchData')->middleware('throttle:40,1')->name('hotels.search.data');
     Route::get('/hotels/places', 'places')->middleware('throttle:60,1')->name('hotels.places');
     Route::get('/hotels/stay/{hotelId}', 'show')->name('hotels.stay');
     Route::post('/hotels/stay/{hotelId}/reserve', 'prebook')->middleware('throttle:20,1')->name('hotels.prebook');

@@ -30,6 +30,7 @@
 <link rel="stylesheet" href="{{ asset('css/site.css') }}?v={{ filemtime(public_path('css/site.css')) }}">
 <script type="application/ld+json">{!! json_encode(['@context'=>'https://schema.org','@type'=>'Organization','name'=>$site,'url'=>url('/'),'logo'=>asset('favicon.svg')], JSON_UNESCAPED_SLASHES) !!}</script>
 @stack('schema')
+@stack('head')
 @if($ga)
 <script async src="https://www.googletagmanager.com/gtag/js?id={{ $ga }}"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','{{ $ga }}');</script>

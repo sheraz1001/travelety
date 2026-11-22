@@ -740,3 +740,92 @@ body:has(.hs-wrap){background:var(--bg)}
 #payment-element .StripeElement,#payment-element iframe{width:100%!important;min-width:100%!important}
 #payment-element button{display:flex!important;align-items:center;justify-content:center;width:100%;height:52px;margin-top:18px;border:0;border-radius:10px;background:var(--orange);color:#fff;font:700 16px "Plus Jakarta Sans",sans-serif;cursor:pointer}
 #payment-element button:hover{filter:brightness(.95)}
+
+/* ===== Hotel results v2: filters + map ===== */
+.hs-side{max-height:calc(100vh - 150px);overflow:auto;scrollbar-width:thin;padding-bottom:4px}
+.hs-mapcard{position:relative;border-radius:14px;overflow:hidden;height:150px;cursor:pointer;box-shadow:var(--sh);background:#dfe7f3}
+.minimap{position:absolute;inset:0;z-index:1}
+.hs-mapcard .hbtn{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);height:40px;box-shadow:0 6px 18px rgba(20,99,255,.4)}
+.hs-mapcard .hbtn svg{width:17px;height:17px}
+.hs-fhead{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:4px}
+.hs-fhead h4{margin:0}
+.linkbtn{background:none;border:0;color:var(--blue);font:600 13px "Plus Jakarta Sans",sans-serif;cursor:pointer}
+.fgrp{padding:14px 0;border-bottom:1px solid var(--line)}
+.fgrp:last-child{border:0;padding-bottom:2px}
+.fgrp h5{font-size:14px;margin-bottom:8px;letter-spacing:0}
+.fgrp h5 .note{font-weight:500;font-size:12px}
+.finput{width:100%;border:1.5px solid var(--line);border-radius:9px;padding:9px 12px;font:500 14px "Plus Jakarta Sans",sans-serif;outline:0}
+.finput:focus{border-color:var(--blue)}
+.fchk{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:14px;cursor:pointer;color:var(--ink)}
+.fchk input{accent-color:var(--blue);width:17px;height:17px;flex:none;margin:0}
+.fchk em{margin-left:auto;font-style:normal;font-size:12.5px;color:var(--muted)}
+.fchk.zero{opacity:.45}
+.hist{display:flex;align-items:flex-end;gap:2px;height:44px;margin:4px 6px 0}
+.hist i{flex:1;background:#d6e0f2;border-radius:2px 2px 0 0;transition:background .15s}
+.hist i.on{background:var(--blue)}
+.range2{position:relative;height:24px;margin:0 2px}
+.range2 input{position:absolute;left:0;right:0;width:100%;top:2px;pointer-events:none;-webkit-appearance:none;appearance:none;background:none;height:20px;margin:0}
+.range2 input::-webkit-slider-thumb{pointer-events:auto;-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;border:2px solid var(--blue);box-shadow:0 2px 6px rgba(0,0,0,.2);cursor:pointer}
+.range2 input::-moz-range-thumb{pointer-events:auto;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--blue);cursor:pointer}
+.range2::before{content:"";position:absolute;left:8px;right:8px;top:11px;height:3px;background:var(--line);border-radius:3px}
+.rlabels{display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:4px}
+.hs-tools{display:flex;gap:8px;align-items:center}
+.hs-sortsel{border:1.5px solid var(--line);border-radius:10px;height:42px;padding:0 12px;font:600 14px "Plus Jakarta Sans",sans-serif;background:#fff;color:var(--ink);cursor:pointer}
+.hs-mobile-filter{display:none}
+.chips-on{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 12px}
+.chips-on:empty{display:none}
+.chips-on button{border:1.5px solid var(--blue-100);background:var(--blue-50);color:var(--blue);border-radius:999px;padding:5px 12px;font:600 13px "Plus Jakarta Sans",sans-serif;cursor:pointer}
+.hs-more{text-align:center;margin-top:18px}
+.hs-more .hbtn{min-width:240px}
+.hcard-img .deal{position:absolute;top:10px;left:10px;background:#00a870;color:#fff;font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:6px;z-index:1}
+.hcard-addr b{color:var(--ink-2);font-weight:600}
+.hcard.skel{pointer-events:none}
+.hcard.skel .hcard-img,.hcard.skel i{background:linear-gradient(90deg,#eef1f6 25%,#f7f9fc 50%,#eef1f6 75%);background-size:200% 100%;animation:sk 1.2s infinite}
+.hcard.skel i{display:block;height:16px;border-radius:6px;width:70%}
+.hcard.skel i.s{width:35%;margin-left:auto;height:34px}
+@keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* map pins */
+.pmk{background:none;border:0}
+.pmk span{display:inline-block;transform:translate(-50%,-100%);background:var(--blue);color:#fff;font:700 12px "Plus Jakarta Sans",sans-serif;padding:4px 8px;border-radius:8px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25);position:relative}
+.pmk span::after{content:"";position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--blue);border-bottom:0}
+.pmk.on span{background:var(--orange);transform:translate(-50%,-100%) scale(1.12)}
+.pmk.on span::after{border-top-color:var(--orange)}
+.mpop{display:flex;gap:10px;color:var(--ink)!important;text-decoration:none}
+.mpop img{width:84px;height:84px;object-fit:cover;border-radius:8px;flex:none}
+.mpop b{display:block;font-size:13.5px;line-height:1.25}
+.mpop p,.mrow p{margin:3px 0 0!important;font-size:12.5px}
+.mpop em,.mrow em{font-style:normal;background:var(--blue);color:#fff;border-radius:5px;padding:1px 5px;font-weight:700}
+.mp{font-weight:800;font-size:15px!important}
+.mp small{font-weight:500;color:var(--muted);font-size:11.5px}
+.leaflet-popup-content{margin:10px}
+.leaflet-container{font-family:"Plus Jakarta Sans",sans-serif}
+/* full-screen map */
+body.noscroll{overflow:hidden}
+.mapov{position:fixed;inset:0;z-index:200;background:#fff;display:flex;flex-direction:column}
+.mapov[hidden]{display:none}
+.mapov-bar{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line)}
+.mapov-bar b{font-size:17px}
+.mapov-x{margin-left:auto;width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);background:#fff;font-size:16px;cursor:pointer}
+.mapov-body{flex:1;display:grid;grid-template-columns:380px 1fr;min-height:0}
+.mapov-list{overflow:auto;border-right:1px solid var(--line);padding:10px}
+.bigmap{height:100%;width:100%}
+.mrow{display:flex;gap:12px;padding:10px;border-radius:12px;color:var(--ink);border:1.5px solid transparent}
+.mrow:hover,.mrow.on{background:var(--blue-50);border-color:var(--blue-100)}
+.mrow img,.mrow>i{width:96px;height:80px;object-fit:cover;border-radius:9px;flex:none;background:#e8edf6}
+.mrow b{display:block;font-size:14px;line-height:1.25}
+@media (max-width:1020px){
+  .hs-side{display:none;max-height:none;overflow:visible}
+  .hs-side.open{display:grid}
+  .hs-mobile-filter{display:inline-flex}
+  .mapov-body{grid-template-columns:1fr}
+  .mapov-list{display:none}
+}
+@media (max-width:720px){
+  .hs-tools{width:100%}
+  .hs-sortsel{flex:1}
+}
+.hd-map{padding:8px}
+#hotelMap{height:200px;border-radius:10px;margin-bottom:8px;z-index:1}
+.hd-map a{padding:0 8px 4px;display:block;color:var(--blue);font-weight:600}
+.minimap,.bigmap,#hotelMap,.hs-mapcard{isolation:isolate}
+@media (max-width:720px){.hs-tools{flex-wrap:wrap}.hs-sortsel{min-width:0;width:100%;flex:1 1 100%}.hs-tools .hs-mobile-filter{flex:1}}

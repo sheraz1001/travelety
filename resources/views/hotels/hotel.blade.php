@@ -12,6 +12,13 @@
   $stars = $h['starRating'] ?? ($h['stars'] ?? null);
   $sent = $h['sentiment_analysis'] ?? null;
 @endphp
+@push('head')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+@endpush
+@push('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>(function(){var el=document.getElementById('hotelMap');if(!el||!window.L)return;var ll=[+el.dataset.lat,+el.dataset.lng];var m=L.map(el,{scrollWheelZoom:false}).setView(ll,15);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(m);L.marker(ll,{icon:L.divIcon({className:'pmk on',html:'<span>Hotel</span>',iconSize:null})}).addTo(m);})();</script>
+@endpush
 @section('content')
 <section class="hs-top">
   <div class="wrap">
@@ -94,6 +101,10 @@
     </div>
 
     <aside class="hd-side">
+      @if(!empty($h['location']['latitude']))
+      <div class="hs-box hd-map"><div id="hotelMap" data-lat="{{ $h['location']['latitude'] }}" data-lng="{{ $h['location']['longitude'] }}"></div>
+        <a class="note" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query={{ $h['location']['latitude'] }},{{ $h['location']['longitude'] }}">Open in Google Maps →</a></div>
+      @endif
       <div class="hs-box">
         <h4>Check-in &amp; check-out</h4>
         <p class="note">Check-in from <b>{{ $times['checkin_start'] ?? '—' }}</b><br>Check-out until <b>{{ $times['checkout'] ?? '—' }}</b></p>

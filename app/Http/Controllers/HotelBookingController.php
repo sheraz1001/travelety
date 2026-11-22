@@ -79,54 +79,80 @@ class HotelBookingController extends Controller
         return response()->json($remote->isNotEmpty() ? $remote->take(8)->values() : $local->values());
     }
 
+    public const FACILITIES = [
+        107 => 'Free WiFi', 2 => 'Parking', 301 => 'Swimming pool', 557 => 'Spa', 492 => 'Fitness centre',
+        17 => 'Airport shuttle', 3 => 'Restaurant', 28 => 'Family rooms', 302 => 'Beachfront', 109 => 'Air conditioning',
+        8 => '24-hour front desk', 5 => 'Room service', 529 => 'Free breakfast', 63 => 'Hot tub/Jacuzzi',
+    ];
+
+    /** Resolve where to search: placeId, a known city, or the first matching place. */
+    protected function where(array &$p): ?array
+    {
+        if ($p['placeId']) {
+            return ['placeId' => $p['placeId']];
+        }
+        if ($p['q'] === '') {
+            return null;
+        }
+        $a = Airport::where('city', $p['q'])->orWhere('city_slug', \Illuminate\Support\Str::slug($p['q']))->orderBy('priority')->first();
+        if ($a) {
+            return ['cityName' => $a->city, 'countryCode' => $a->country_code];
+        }
+        $place = $this->api->places($p['q'])[0] ?? null;
+        if ($place) {
+            $p['placeId'] = $place['placeId'];
+
+            return ['placeId' => $place['placeId']];
+        }
+
+        return null;
+    }
+
+    /** Results page shell: renders instantly, hotels load via searchData(). */
     public function search(Request $r)
     {
         if (! $this->api->enabled()) {
             return redirect()->route('hotels.index');
         }
         $p = $this->params($r);
-        $result = ['hotels' => [], 'error' => null];
-        $where = null;
-
-        if ($p['placeId']) {
-            $where = ['placeId' => $p['placeId']];
-        } elseif ($p['q'] !== '') {
-            $a = Airport::where('city', $p['q'])->orWhere('city_slug', \Illuminate\Support\Str::slug($p['q']))->orderBy('priority')->first();
-            if ($a) {
-                $where = ['cityName' => $a->city, 'countryCode' => $a->country_code];
-            } else {
-                $place = $this->api->places($p['q'])[0] ?? null;
-                if ($place) {
-                    $where = ['placeId' => $place['placeId']];
-                    $p['placeId'] = $place['placeId'];
-                }
-            }
-        }
-
-        if ($where) {
-            $result = $this->api->search($where, $p['checkin'], $p['checkout'], $p['occupancies'], $p['currency'], $p['nationality']);
-        }
-
-        $hotels = collect($result['hotels']);
-        $sort = $r->query('sort', 'recommended');
-        $stars = array_filter(array_map('intval', (array) $r->query('stars', [])));
-        if ($stars) {
-            $hotels = $hotels->filter(fn ($h) => $h['stars'] && in_array((int) floor($h['stars']), $stars));
-        }
-        if ($r->boolean('refundable')) {
-            $hotels = $hotels->filter(fn ($h) => $h['price']['refundable']);
-        }
-        $hotels = match ($sort) {
-            'price' => $hotels->sortBy(fn ($h) => $h['price']['amount']),
-            'rating' => $hotels->sortByDesc(fn ($h) => $h['rating'] ?? 0),
-            'stars' => $hotels->sortByDesc(fn ($h) => $h['stars'] ?? 0),
-            default => $hotels->sortByDesc(fn ($h) => ($h['rating'] ?? 6) * 10 - $h['price']['amount'] / max(1, $p['nights']) / 40),
-        };
 
         return view('hotels.search', [
-            'p' => $p, 'hotels' => $hotels->values(), 'error' => $result['error'], 'searched' => (bool) $where,
-            'sort' => $sort, 'stars' => $stars, 'qs' => $this->qs($p), 'sandbox' => $this->api->mode() === 'sandbox',
+            'p' => $p, 'qs' => $this->qs($p), 'sandbox' => $this->api->mode() === 'sandbox',
+            'facilities' => self::FACILITIES, 'selectedFac' => array_map('intval', (array) $r->query('fac', [])),
         ]);
+    }
+
+    public function searchData(Request $r)
+    {
+        abort_unless($this->api->enabled(), 404);
+        $p = $this->params($r);
+        $where = $this->where($p);
+        if (! $where) {
+            return response()->json(['hotels' => [], 'error' => $p['q'] === '' ? null : 'We couldn\'t find that destination. Try a city name.', 'searched' => $p['q'] !== '']);
+        }
+        $fac = array_values(array_intersect(array_map('intval', (array) $r->query('fac', [])), array_keys(self::FACILITIES)));
+        $res = $this->api->search($where, $p['checkin'], $p['checkout'], $p['occupancies'], $p['currency'], $p['nationality'], 150, $fac);
+        $qs = $this->qs($p);
+
+        $hotels = collect($res['hotels'])->map(function ($h) use ($qs, $p) {
+            $b = strtoupper((string) ($h['price']['boardType'] ?? ''));
+            $bn = strtolower((string) ($h['price']['board'] ?? ''));
+            $meal = match (true) {
+                in_array($b, ['AI', 'UAI']) || str_contains($bn, 'all inclusive') => 'ai',
+                $b === 'FB' || str_contains($bn, 'full board') => 'fb',
+                $b === 'HB' || str_contains($bn, 'half board') => 'hb',
+                in_array($b, ['BB', 'CB']) || str_contains($bn, 'breakfast') => 'bb',
+                default => 'ro',
+            };
+
+            return $h + [
+                'url' => route('hotels.stay', ['hotelId' => $h['id']] + $qs),
+                'night' => round($h['price']['amount'] / max(1, $p['nights']), 2),
+                'meal' => $meal,
+            ];
+        })->values();
+
+        return response()->json(['hotels' => $hotels, 'error' => $res['error'], 'searched' => true, 'nights' => $p['nights'], 'placeId' => $p['placeId']]);
     }
 
     public function show(Request $r, string $hotelId)

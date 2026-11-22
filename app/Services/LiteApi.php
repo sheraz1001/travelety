@@ -95,13 +95,17 @@ class LiteApi
      * Search hotels with rates. $where = ['placeId'=>..] or ['cityName'=>..,'countryCode'=>..] or ['hotelIds'=>[...]].
      * Returns ['hotels'=>[...normalised...], 'error'=>?string].
      */
-    public function search(array $where, string $checkin, string $checkout, array $occupancies, string $currency, string $nationality, int $limit = 60): array
+    public function search(array $where, string $checkin, string $checkout, array $occupancies, string $currency, string $nationality, int $limit = 150, array $facilities = []): array
     {
         $body = array_filter($where) + [
             'checkin' => $checkin, 'checkout' => $checkout, 'currency' => $currency,
             'guestNationality' => $nationality, 'occupancies' => $occupancies,
             'limit' => $limit, 'timeout' => 12, 'maxRatesPerHotel' => 1, 'includeHotelData' => true,
         ];
+        if ($facilities) {
+            $body['facilities'] = array_values(array_map('intval', $facilities));
+            $body['strictFacilityFiltering'] = true;
+        }
         $key = 'lite.search.v1.'.$this->mode().'.'.md5(json_encode($body));
         $r = Cache::get($key);
         if (! $r) {
@@ -133,6 +137,7 @@ class LiteApi
                         'currency' => $rt['offerRetailRate']['currency'] ?? ($rate['retailRate']['total'][0]['currency'] ?? ''),
                         'public' => isset($rt['suggestedSellingPrice']['amount']) ? (float) $rt['suggestedSellingPrice']['amount'] : null,
                         'board' => $rate['boardName'] ?? null,
+                        'boardType' => $rate['boardType'] ?? null,
                         'refundable' => ($rate['cancellationPolicies']['refundableTag'] ?? '') === 'RFN',
                         'room' => $rate['name'] ?? null,
                     ];

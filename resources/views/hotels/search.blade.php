@@ -1,42 +1,89 @@
 @extends('layouts.app')
 @section('title', ($p['q'] ? 'Hotels in '.$p['q'] : 'Hotel search').' — '.\Carbon\Carbon::parse($p['checkin'])->format('j M').' to '.\Carbon\Carbon::parse($p['checkout'])->format('j M').' | '.$site)
 @section('noindex', '1')
-@php
-  $I = fn($n,$sw=1.9) => view('partials.icon',['n'=>$n,'sw'=>$sw])->render();
-  $m = fn($a,$c) => $c.' '.number_format($a, $a >= 1000 ? 0 : 2);
-  $link = fn($extra = []) => route('hotels.search', array_merge($qs, ['sort' => $sort], $extra));
-@endphp
+@php $I = fn($n,$sw=1.9) => view('partials.icon',['n'=>$n,'sw'=>$sw])->render(); @endphp
+@push('head')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+@endpush
 @section('content')
 <section class="hs-top">
-  <div class="wrap">
-    <div class="search hs-search">@include('hotels.partials.form', ['p' => $p])</div>
-  </div>
+  <div class="wrap"><div class="search hs-search">@include('hotels.partials.form', ['p' => $p])</div></div>
 </section>
 
-<div class="wrap hs-wrap">
+<div class="wrap hs-wrap" id="hsApp"
+     data-endpoint="{{ route('hotels.search.data') }}"
+     data-qs='@json($qs)'
+     data-nights="{{ $p['nights'] }}"
+     data-fac='@json($selectedFac)'>
   @if($sandbox)<div class="hs-test">Test mode: prices are real but bookings are not sent to hotels and no card is charged.</div>@endif
 
   <div class="hs-grid">
-    <aside class="hs-side">
-      <div class="hs-box">
-        <h4>Your stay</h4>
-        <p><b>{{ $p['q'] ?: 'Choose a destination' }}</b></p>
-        <p class="note">{{ \Carbon\Carbon::parse($p['checkin'])->format('D j M') }} – {{ \Carbon\Carbon::parse($p['checkout'])->format('D j M') }} · {{ $p['nights'] }} night{{ $p['nights']>1?'s':'' }}<br>{{ $p['adults'] }} adult{{ $p['adults']>1?'s':'' }} · {{ $p['rooms'] }} room{{ $p['rooms']>1?'s':'' }}</p>
+    <aside class="hs-side" id="hsSide">
+      <div class="hs-mapcard" id="openMap">
+        <div id="miniMap" class="minimap"></div>
+        <button type="button" class="hbtn hbtn-blue">{!! $I('pin') !!}Show on map</button>
       </div>
-      <form class="hs-box" method="get" action="{{ route('hotels.search') }}">
-        @foreach($qs as $k => $v)<input type="hidden" name="{{ $k }}" value="{{ $v }}">@endforeach
-        <input type="hidden" name="sort" value="{{ $sort }}">
-        <h4>Star rating</h4>
-        @foreach([5,4,3,2] as $s)
-          <label class="hs-check"><input type="checkbox" name="stars[]" value="{{ $s }}" @checked(in_array($s,$stars)) onchange="this.form.submit()"> {{ str_repeat('★', $s) }}</label>
-        @endforeach
-        <h4 style="margin-top:14px">Booking options</h4>
-        <label class="hs-check"><input type="checkbox" name="refundable" value="1" @checked(request()->boolean('refundable')) onchange="this.form.submit()"> Free cancellation</label>
-      </form>
-      <div class="hs-box hs-trust">
-        <div>{!! $I('shield') !!}<span>Secure payment</span></div>
-        <div>{!! $I('check',2.2) !!}<span>Instant confirmation email</span></div>
-        <div>{!! $I('help') !!}<span>Support before and after your stay</span></div>
+
+      <div class="hs-box hs-filters">
+        <div class="hs-fhead"><h4>Filter by</h4><button type="button" class="linkbtn" id="fReset">Reset all</button></div>
+
+        <div class="fgrp">
+          <h5>Property name</h5>
+          <input type="search" id="fName" class="finput" placeholder="e.g. Marriott">
+        </div>
+
+        <div class="fgrp">
+          <h5>Your budget <span class="note">(per night)</span></h5>
+          <div class="hist" id="fHist"></div>
+          <div class="range2">
+            <input type="range" id="fMin" min="0" max="100" value="0">
+            <input type="range" id="fMax" min="0" max="100" value="100">
+          </div>
+          <div class="rlabels"><span id="fMinL">–</span><span id="fMaxL">–</span></div>
+        </div>
+
+        <div class="fgrp">
+          <h5>Popular filters</h5>
+          <label class="fchk"><input type="checkbox" data-f="refundable"> Free cancellation <em data-c="refundable"></em></label>
+          <label class="fchk"><input type="checkbox" data-f="meal" value="bb"> Breakfast included <em data-c="meal:bb"></em></label>
+          <label class="fchk"><input type="checkbox" data-f="score" value="8"> Very good: 8+ <em data-c="score:8"></em></label>
+          <label class="fchk"><input type="checkbox" data-f="stars" value="5"> 5 stars <em data-c="stars:5"></em></label>
+        </div>
+
+        <div class="fgrp">
+          <h5>Guest review score</h5>
+          @foreach([9=>'Wonderful: 9+',8=>'Very good: 8+',7=>'Good: 7+',6=>'Pleasant: 6+'] as $v=>$l)
+            <label class="fchk"><input type="radio" name="fScore" data-f="scoreR" value="{{ $v }}"> {{ $l }} <em data-c="score:{{ $v }}"></em></label>
+          @endforeach
+        </div>
+
+        <div class="fgrp">
+          <h5>Star rating</h5>
+          @foreach([5,4,3,2,1] as $s)
+            <label class="fchk"><input type="checkbox" data-f="stars" value="{{ $s }}"> <span class="stars">{{ str_repeat('★',$s) }}</span> <em data-c="stars:{{ $s }}"></em></label>
+          @endforeach
+        </div>
+
+        <div class="fgrp">
+          <h5>Meals</h5>
+          @foreach(['bb'=>'Breakfast included','hb'=>'Half board','fb'=>'Full board','ai'=>'All inclusive','ro'=>'Room only'] as $v=>$l)
+            <label class="fchk"><input type="checkbox" data-f="meal" value="{{ $v }}"> {{ $l }} <em data-c="meal:{{ $v }}"></em></label>
+          @endforeach
+        </div>
+
+        <div class="fgrp">
+          <h5>Distance from centre</h5>
+          @foreach([1=>'Less than 1 km',3=>'Less than 3 km',5=>'Less than 5 km',10=>'Less than 10 km'] as $v=>$l)
+            <label class="fchk"><input type="radio" name="fDist" data-f="dist" value="{{ $v }}"> {{ $l }} <em data-c="dist:{{ $v }}"></em></label>
+          @endforeach
+        </div>
+
+        <div class="fgrp">
+          <h5>Facilities <span class="note">(updates results)</span></h5>
+          @foreach($facilities as $id=>$l)
+            <label class="fchk"><input type="checkbox" class="ffac" value="{{ $id }}" @checked(in_array($id,$selectedFac))> {{ $l }}</label>
+          @endforeach
+        </div>
       </div>
     </aside>
 
@@ -44,59 +91,47 @@
       <div class="hs-head">
         <div>
           <h1>{{ $p['q'] ? 'Hotels in '.$p['q'] : 'Find your hotel' }}</h1>
-          @if($searched)<p class="note">{{ $hotels->count() }} properties with rooms available · prices for {{ $p['nights'] }} night{{ $p['nights']>1?'s':'' }}, taxes included</p>@endif
+          <p class="note" id="hsCount">Searching the best prices for {{ \Carbon\Carbon::parse($p['checkin'])->format('j M') }} – {{ \Carbon\Carbon::parse($p['checkout'])->format('j M') }}…</p>
         </div>
-        @if($hotels->count())
-        <div class="hs-sort">
-          @foreach(['recommended'=>'Recommended','price'=>'Lowest price','rating'=>'Guest rating','stars'=>'Stars'] as $k => $l)
-            <a href="{{ $link(['sort'=>$k] + ($stars ? ['stars'=>$stars] : []) + (request()->boolean('refundable') ? ['refundable'=>1] : [])) }}" class="{{ $sort === $k ? 'on' : '' }}">{{ $l }}</a>
-          @endforeach
+        <div class="hs-tools">
+          <button type="button" class="hbtn hbtn-ghost hs-mobile-filter" id="mFilter">Filters</button>
+          <button type="button" class="hbtn hbtn-ghost hs-mobile-filter" id="mMap">{!! $I('pin') !!}Map</button>
+          <select id="hsSort" class="hs-sortsel" aria-label="Sort by">
+            <option value="rec">Our top picks</option>
+            <option value="price">Price (lowest first)</option>
+            <option value="price_d">Price (highest first)</option>
+            <option value="rating">Guest rating</option>
+            <option value="stars">Stars (highest first)</option>
+            <option value="dist">Distance from centre</option>
+          </select>
         </div>
-        @endif
       </div>
+      <div class="chips-on" id="chipsOn"></div>
 
-      @if($error)
-        <div class="hs-empty"><h3>We couldn't load hotels right now</h3><p>{{ $error }}</p></div>
-      @elseif(! $searched)
-        <div class="hs-empty"><h3>Where are you going?</h3><p>Type a city, area or landmark above to see hotels with live prices.</p></div>
-      @elseif($hotels->isEmpty())
-        <div class="hs-empty"><h3>No rooms available</h3><p>Try different dates, fewer filters or a nearby area.</p></div>
-      @endif
-
-      <div class="hs-list">
-        @foreach($hotels as $h)
-          @php $url = route('hotels.stay', ['hotelId' => $h['id']] + $qs); $pr = $h['price']; @endphp
-          <a class="hcard" href="{{ $url }}">
-            <div class="hcard-img">@if($h['photo'])<img src="{{ $h['photo'] }}" alt="{{ $h['name'] }}" loading="lazy">@endif</div>
-            <div class="hcard-bd">
-              <div class="hcard-top">
-                <div>
-                  <h3>{{ $h['name'] }}</h3>
-                  @if($h['stars'])<span class="stars">{{ str_repeat('★', (int) round($h['stars'])) }}</span>@endif
-                  <p class="hcard-addr">{!! $I('pin') !!}{{ trim(($h['address'] ?? '').($h['city'] ? ', '.$h['city'] : ''), ', ') }}</p>
-                </div>
-                @if($h['rating'])
-                  <div class="rbadge"><b>{{ number_format($h['rating'], 1) }}</b><span>{{ $h['rating'] >= 9 ? 'Exceptional' : ($h['rating'] >= 8 ? 'Excellent' : ($h['rating'] >= 7 ? 'Very good' : 'Good')) }}@if($h['reviews'])<small>{{ number_format($h['reviews']) }} reviews</small>@endif</span></div>
-                @endif
-              </div>
-              <div class="hcard-foot">
-                <div class="hcard-tags">
-                  @if($pr['room'])<span class="t">{{ $pr['room'] }}</span>@endif
-                  @if($pr['board'])<span class="t {{ str_contains(strtolower($pr['board']), 'breakfast') ? 'g' : '' }}">{{ $pr['board'] }}</span>@endif
-                  <span class="t {{ $pr['refundable'] ? 'g' : '' }}">{{ $pr['refundable'] ? 'Free cancellation' : 'Non-refundable' }}</span>
-                </div>
-                <div class="hcard-price">
-                  @if($pr['public'] && $pr['public'] > $pr['amount'] * 1.03)<s>{{ $m($pr['public'], $pr['currency']) }}</s>@endif
-                  <b>{{ $m($pr['amount'], $pr['currency']) }}</b>
-                  <small>{{ $m($pr['amount'] / max(1, $p['nights']), $pr['currency']) }} per night</small>
-                  <span class="hbtn hbtn-blue">See rooms</span>
-                </div>
-              </div>
-            </div>
-          </a>
-        @endforeach
+      <div class="hs-list" id="hsList">
+        @for($i=0;$i<4;$i++)
+          <div class="hcard skel"><div class="hcard-img"></div><div class="hcard-bd"><i></i><i></i><i class="s"></i></div></div>
+        @endfor
       </div>
+      <div class="hs-more"><button type="button" class="hbtn hbtn-ghost" id="hsMore" hidden>Show more hotels</button></div>
     </main>
   </div>
 </div>
+
+<div class="mapov" id="mapOv" hidden>
+  <div class="mapov-bar">
+    <b id="mapTitle">{{ $p['q'] ? 'Hotels in '.$p['q'] : 'Hotels' }}</b>
+    <span class="note" id="mapCount"></span>
+    <button type="button" class="mapov-x" id="mapClose" aria-label="Close map">✕</button>
+  </div>
+  <div class="mapov-body">
+    <div class="mapov-list" id="mapList"></div>
+    <div id="bigMap" class="bigmap"></div>
+  </div>
+</div>
 @endsection
+
+@push('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="{{ asset('js/hotels.js') }}?v={{ filemtime(public_path('js/hotels.js')) }}"></script>
+@endpush
