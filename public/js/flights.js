@@ -7,7 +7,10 @@
   var $ = function (s, el) { return (el || document).querySelector(s); }, $$ = function (s, el) { return [].slice.call((el || document).querySelectorAll(s)); };
   var list = $('#flList'), more = $('#flMore'), count = $('#flCount'), prog = $('#flProg');
   var all = [], view = [], shown = 0, PAGE = 15, hash = '', cur = '';
-  var st = { stops: [], maxPrice: null, bag: false, refund: false, change: false, slots: [[], []], maxDur: null, air: [], sort: 'best' };
+  var NL = 0; // number of legs
+  function fresh(sort) { var o = { stops: [], maxPrice: null, bag: false, cabinbag: false, refund: false, change: false, seat: false, noOvernight: false, noChange: false, maxLay: null, maxDur: null, air: [], all: [], via: [], aps: [], dep: [], arr: [], sort: sort || 'best', sort2: '' }; for (var i = 0; i < 6; i++) { o.dep.push([]); o.arr.push([]); } return o; }
+  var st = fresh();
+  var ALLY = { 'Star Alliance': 'LH UA AC NH SQ TK LX OS SN TP LO OZ ET MS A3 CA BR TG AI NZ SA CM AV ZH OU', 'oneworld': 'AA BA QR CX JL QF IB AY MH RJ AS UL AT WY', 'SkyTeam': 'AF KL DL KE AM AR CI MU SV VN GA ME KQ RO SK VS UX' };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var fmt = function (n, d) { return cur + ' ' + Number(n).toLocaleString('en-US', { minimumFractionDigits: d === 0 ? 0 : 2, maximumFractionDigits: d === 0 ? 0 : 2 }); };
   var hm = function (m) { if (m == null) return '–'; return Math.floor(m / 60) + 'h ' + (m % 60 ? (m % 60) + 'm' : ''); };
@@ -19,7 +22,7 @@
   function load() {
     var w = 0; prog.hidden = false; var bar = prog.querySelector('i'); bar.style.width = '5%';
     var t = setInterval(function () { w = Math.min(92, w + (92 - w) * .08); bar.style.width = w + '%'; }, 250);
-    fetch(endpoint + '?' + new URLSearchParams(qs).toString(), { headers: { Accept: 'application/json' } })
+    fetch(endpoint + '?' + (app.dataset.query || new URLSearchParams(qs).toString()), { headers: { Accept: 'application/json' } })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         clearInterval(t); bar.style.width = '100%'; setTimeout(function () { prog.hidden = true; }, 300);
@@ -32,9 +35,22 @@
           j.refund = j.offers.some(function (o) { return o.refundable; });
           j.change = j.offers.some(function (o) { return o.changeable; });
           j.codes = j.airlines.map(function (a) { return a.code; });
+          j.cabinbag = j.offers.some(function (o) { return o.cabinBag; });
+          j.seat = j.offers.some(function (o) { return o.seatSelect; });
+          var lays = [].concat.apply([], j.legs.map(function (l) { return l.layovers; }));
+          j.maxLay = lays.length ? Math.max.apply(null, lays.map(function (x) { return x.min; })) : 0;
+          j.noOvernight = !lays.some(function (x) { return x.overnight; });
+          j.noChange = !lays.some(function (x) { return x.changeAirport; });
+          j.via = lays.map(function (x) { return x.code; });
+          j.aps = [];
+          j.legs.forEach(function (l) { j.aps.push(l.from, l.to); });
+          j.ally = Object.keys(ALLY).filter(function (k) { return j.codes.some(function (c) { return ALLY[k].split(' ').indexOf(c) >= 0; }); });
         });
+        NL = Math.max.apply(null, all.map(function (j) { return j.legs.length; }));
         var cheap = Math.min.apply(null, all.map(function (j) { return j.price; })), fast = Math.min.apply(null, all.map(function (j) { return j.min; }));
         all.forEach(function (j) { j.score = j.price / cheap * 0.6 + j.min / fast * 0.4 + (j.stops * 0.08) - (j.best ? 0.15 : 0); });
+        all.forEach(function (j) { j.aps.forEach(function (c) { apsAll[c] = 1; }); });
+        // airports filter only matters where a city has several airports in results
         setupRanges(); airlines(); counts(); apply();
       })
       .catch(function () { clearInterval(t); prog.hidden = true; list.innerHTML = empty('Connection problem', 'Please check your connection and try again.'); });
@@ -42,7 +58,7 @@
   function empty(h, p) { return '<div class="hs-empty"><h3>' + h + '</h3><p>' + p + '</p></div>'; }
 
   /* ---------- ranges + airlines ---------- */
-  var pMin = 0, pMax = 0, dMin = 0, dMax = 0;
+  var pMin = 0, pMax = 0, dMin = 0, dMax = 0, lMax = 0;
   function setupRanges() {
     var ps = all.map(function (j) { return j.price; }), ds = all.map(function (j) { return j.min; });
     pMin = Math.floor(Math.min.apply(null, ps)); pMax = Math.ceil(Math.max.apply(null, ps));
@@ -50,6 +66,8 @@
     var fp = $('#fPrice'); fp.min = pMin; fp.max = pMax; fp.step = Math.max(1, Math.round((pMax - pMin) / 100)); fp.value = pMax;
     var fd = $('#fDur'); fd.min = dMin; fd.max = dMax; fd.step = 15; fd.value = dMax;
     $('#fPriceL').textContent = fmt(pMax, 0); $('#fDurL').textContent = hm(dMax);
+    lMax = Math.max.apply(null, all.map(function (j) { return j.maxLay; })) || 0;
+    var fl = $('#fLay'); fl.min = 30; fl.max = Math.max(60, lMax); fl.step = 15; fl.value = fl.max; $('#fLayL').textContent = lMax ? hm(lMax) : 'none';
   }
   function airlines() {
     var m = {};
@@ -59,20 +77,58 @@
       return '<label class="fchk"><input type="checkbox" data-f="air" value="' + esc(k) + '">' + (m[k].l ? '<img class="alogo-s" src="' + esc(m[k].l) + '" alt="">' : '') + esc(m[k].n) + '<em>' + fmt(m[k].p, 0) + '</em></label>';
     }).join('');
     $$('#fAir input').forEach(bind);
+    listFilter('#fVia', 'via', function (j) { return j.via; }, 'Layover airports', function (c) { var x = null; all.some(function (j) { return j.legs.some(function (l) { return l.layovers.some(function (y) { if (y.code === c) { x = y.name; return true; } }); }); }); return (x ? x + ' ' : '') + '(' + c + ')'; });
+    airportsFilter();
+    listFilter('#fAll', 'all', function (j) { return j.ally; }, '', function (c) { return c; }, 1);
+    $('#fAirportsG').hidden = !$('#fAirports').innerHTML; $('#fAllG').hidden = !$('#fAll').innerHTML;
+  }
+  function airportsFilter() {
+    var html = '';
+    for (var l = 0; l < NL; l++) ['from', 'to'].forEach(function (pos) {
+      var m = {}, nm = {};
+      all.forEach(function (j) { var lg = j.legs[l]; if (!lg) return; var c = lg[pos]; m[c] = Math.min(m[c] || Infinity, j.price); nm[c] = lg[pos + 'Name']; });
+      var keys = Object.keys(m); if (keys.length < 2) return;
+      html += '<p class="fsub">' + (NL > 1 ? 'Flight ' + (l + 1) + ' · ' : '') + (pos === 'from' ? 'Departure airport' : 'Arrival airport') + '</p>' + keys.sort(function (a, b) { return m[a] - m[b]; }).map(function (k) {
+        return '<label class="fchk"><input type="checkbox" data-f="aps" value="' + l + ':' + pos + ':' + esc(k) + '">' + esc((nm[k] || k) + ' (' + k + ')') + '<em>' + fmt(m[k], 0) + '</em></label>';
+      }).join('');
+    });
+    $('#fAirports').innerHTML = html; $$('#fAirports input').forEach(bind);
+  }
+  function listFilter(sel, key, get, title, label, minCount) {
+    var m = {};
+    all.forEach(function (j) { get(j).filter(function (v, i, a) { return a.indexOf(v) === i; }).forEach(function (c) { m[c] = Math.min(m[c] || Infinity, j.price); }); });
+    var keys = Object.keys(m).sort(function (a, b) { return m[a] - m[b]; });
+    if (keys.length < (minCount || 1) + (key === 'aps' ? 1 : 0)) { $(sel).innerHTML = ''; return; }
+    $(sel).innerHTML = (title ? '<p class="fsub">' + title + '</p>' : '') + keys.slice(0, 15).map(function (k) {
+      return '<label class="fchk"><input type="checkbox" data-f="' + key + '" value="' + esc(k) + '">' + esc(label(k)) + '<em>' + fmt(m[k], 0) + '</em></label>';
+    }).join('');
+    $$(sel + ' input').forEach(bind);
   }
 
   /* ---------- filter ---------- */
+  function inter(a, b) { return a.some(function (x) { return b.indexOf(x) >= 0; }); }
   function pass(j, skip) {
     if (st.stops.length && skip !== 'stops' && st.stops.indexOf(Math.min(2, j.stops)) < 0) return false;
     if (st.maxPrice !== null && skip !== 'price' && j.price > st.maxPrice) return false;
-    if (st.bag && skip !== 'bag' && !j.bag) return false;
-    if (st.refund && skip !== 'refund' && !j.refund) return false;
-    if (st.change && skip !== 'change' && !j.change) return false;
+    var flags = ['bag', 'cabinbag', 'refund', 'change', 'seat', 'noOvernight', 'noChange'];
+    for (var f = 0; f < flags.length; f++) if (st[flags[f]] && skip !== flags[f] && !j[flags[f]]) return false;
     if (st.maxDur !== null && skip !== 'dur' && j.min > st.maxDur) return false;
-    if (st.air.length && skip !== 'air' && !j.codes.some(function (c) { return st.air.indexOf(c) >= 0; })) return false;
-    for (var l = 0; l < 2; l++) if (st.slots[l].length && j.legs[l] && st.slots[l].indexOf(slot(j.legs[l].dep)) < 0) return false;
+    if (st.maxLay !== null && skip !== 'lay' && j.maxLay > st.maxLay) return false;
+    if (st.air.length && skip !== 'air' && !inter(j.codes, st.air)) return false;
+    if (st.all.length && skip !== 'all' && !inter(j.ally, st.all)) return false;
+    if (st.via.length && skip !== 'via' && j.via.length && !j.via.every(function (v) { return st.via.indexOf(v) >= 0; })) return false;
+    if (st.aps.length && skip !== 'aps') {
+      var groups = {};
+      st.aps.forEach(function (x) { var p = x.split(':'); (groups[p[0] + ':' + p[1]] = groups[p[0] + ':' + p[1]] || []).push(p[2]); });
+      for (var g in groups) { var q = g.split(':'), lg = j.legs[+q[0]]; if (lg && groups[g].indexOf(lg[q[1]]) < 0) return false; }
+    }
+    for (var l = 0; l < NL; l++) {
+      if (st.dep[l].length && j.legs[l] && st.dep[l].indexOf(slot(j.legs[l].dep)) < 0) return false;
+      if (st.arr[l].length && j.legs[l] && st.arr[l].indexOf(slot(j.legs[l].arr)) < 0) return false;
+    }
     return true;
   }
+  var apsAll = {};
   function counts() {
     $$('[data-c]').forEach(function (em) {
       var k = em.dataset.c.split(':'), f = k[0], v = +k[1], n = 0;
@@ -91,7 +147,14 @@
       var top = view.slice().sort(by[s])[0], el = $('#flSorts [data-s="' + s + '"] span');
       el.textContent = top ? fmt(top.price, 0) + ' · ' + hm(top.min) : '–';
     });
-    view.sort(by[st.sort]);
+    var by2 = {
+      dep: function (a, b) { return a.legs[0].dep < b.legs[0].dep ? -1 : 1; },
+      dep_d: function (a, b) { return a.legs[0].dep > b.legs[0].dep ? -1 : 1; },
+      arr: function (a, b) { return a.legs[0].arr < b.legs[0].arr ? -1 : 1; },
+      stops: function (a, b) { return a.stops - b.stops || a.price - b.price; },
+      lay: function (a, b) { return a.maxLay - b.maxLay || a.price - b.price; }
+    };
+    view.sort(st.sort2 ? by2[st.sort2] : by[st.sort]);
     count.textContent = view.length + ' of ' + all.length + ' flights · prices for ' + pax + ' traveller' + (pax > 1 ? 's' : '') + ', taxes included';
     shown = 0; list.innerHTML = view.length ? '' : empty('No flights match your filters', 'Try removing a filter.');
     page(); chips();
@@ -127,10 +190,10 @@
   }
   function details(j) {
     return '<div class="fdet">' + j.legs.map(function (l) {
-      return '<div class="fdl"><h5>' + (l.dir === 'INBOUND' ? 'Return' : 'Outbound') + ' · ' + dshort(l.dep) + ' · ' + hm(l.min) + '</h5>' +
+      return '<div class="fdl"><h5>' + (l.dir === 'INBOUND' ? 'Return' : (/^LEG/.test(l.dir) ? 'Flight ' + l.dir.substr(3) : 'Outbound')) + ' · ' + dshort(l.dep) + ' · ' + hm(l.min) + '</h5>' +
         l.segments.map(function (s, i) {
           var lay = l.layovers[i] ? '<div class="lay">⏱ ' + hm(l.layovers[i].min) + ' layover in ' + esc(l.layovers[i].name || l.layovers[i].code) + (l.layovers[i].changeAirport ? ' · <b>change airport</b>' : '') + (l.layovers[i].overnight ? ' · overnight' : '') + '</div>' : '';
-          return '<div class="seg">' + (s.logo ? '<img src="' + esc(s.logo) + '" alt="">' : '') + '<div><p><b>' + tm(s.dep) + '</b> ' + esc(s.fromName) + ' (' + esc(s.from) + ')</p><p class="note">' + esc(s.airline) + ' · ' + esc(s.flight) + ' · ' + hm(s.min) + (s.operatedBy ? ' · operated by ' + esc(s.operatedBy) : '') + '</p><p><b>' + tm(s.arr) + '</b> ' + esc(s.toName) + ' (' + esc(s.to) + ')</p></div></div>' + lay;
+          return '<div class="seg">' + (s.logo ? '<img src="' + esc(s.logo) + '" alt="">' : '') + '<div><p><b>' + tm(s.dep) + '</b> ' + esc(s.fromName) + ' (' + esc(s.from) + ')</p><p class="note">' + esc(s.airline) + ' · ' + esc(s.flight) + ' · ' + hm(s.min) + (s.operatedBy ? ' · operated by ' + esc(s.operatedBy) : '') + (s.aircraft ? ' · ' + esc(s.aircraft) : '') + '</p><p><b>' + tm(s.arr) + '</b> ' + esc(s.toName) + ' (' + esc(s.to) + ')</p></div></div>' + lay;
         }).join('') + '</div>';
     }).join('') + '</div>';
   }
@@ -155,34 +218,37 @@
   });
 
   /* ---------- chips ---------- */
+  var LBL = { bag: 'Checked bag', cabinbag: 'Cabin bag', refund: 'Refundable', change: 'Changeable', seat: 'Seat selection', noOvernight: 'No overnight layovers', noChange: 'No airport changes' };
   function chips() {
     var c = [];
     st.stops.forEach(function (s) { c.push(['stops:' + s, s === 0 ? 'Direct' : s === 1 ? '1 stop' : '2+ stops']); });
     if (st.maxPrice !== null) c.push(['price', 'Up to ' + fmt(st.maxPrice, 0)]);
-    if (st.bag) c.push(['bag', 'Checked bag']); if (st.refund) c.push(['refund', 'Refundable']); if (st.change) c.push(['change', 'Changeable']);
-    if (st.maxDur !== null) c.push(['dur', 'Up to ' + hm(st.maxDur)]);
-    st.air.forEach(function (a) { c.push(['air:' + a, a]); });
-    [0, 1].forEach(function (l) { if (st.slots[l].length) c.push(['slot:' + l, (l ? 'Return' : 'Outbound') + ' time']); });
+    Object.keys(LBL).forEach(function (k) { if (st[k]) c.push([k, LBL[k]]); });
+    if (st.maxDur !== null) c.push(['dur', 'Journey up to ' + hm(st.maxDur)]);
+    if (st.maxLay !== null) c.push(['lay', 'Layover up to ' + hm(st.maxLay)]);
+    ['air', 'all', 'via', 'aps'].forEach(function (k) { st[k].forEach(function (v) { c.push([k + ':' + v, (k === 'via' ? 'via ' : '') + (k === 'aps' ? v.split(':')[2] : v)]); }); });
+    for (var l = 0; l < NL; l++) { if (st.dep[l].length) c.push(['dep:' + l, 'Flight ' + (l + 1) + ' departure']); if (st.arr[l].length) c.push(['arr:' + l, 'Flight ' + (l + 1) + ' arrival']); }
     $('#chipsOn').innerHTML = c.map(function (x) { return '<button type="button" data-x="' + esc(x[0]) + '">' + esc(x[1]) + ' ✕</button>'; }).join('');
   }
   $('#chipsOn').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-x]'); if (!b) return; var k = b.dataset.x.split(':');
-    if (k[0] === 'stops') st.stops = st.stops.filter(function (s) { return s !== +k[1]; });
+    var b = e.target.closest('[data-x]'); if (!b) return; var k = b.dataset.x.split(':'), v = k.slice(1).join(':');
+    if (k[0] === 'stops') st.stops = st.stops.filter(function (s) { return s !== +v; });
     if (k[0] === 'price') { st.maxPrice = null; $('#fPrice').value = pMax; $('#fPriceL').textContent = fmt(pMax, 0); }
     if (k[0] === 'dur') { st.maxDur = null; $('#fDur').value = dMax; $('#fDurL').textContent = hm(dMax); }
-    if (['bag', 'refund', 'change'].indexOf(k[0]) >= 0) st[k[0]] = false;
-    if (k[0] === 'air') st.air = st.air.filter(function (a) { return a !== k[1]; });
-    if (k[0] === 'slot') st.slots[+k[1]] = [];
+    if (k[0] === 'lay') { st.maxLay = null; $('#fLay').value = $('#fLay').max; $('#fLayL').textContent = hm(lMax); }
+    if (LBL[k[0]]) st[k[0]] = false;
+    if (['air', 'all', 'via', 'aps'].indexOf(k[0]) >= 0) st[k[0]] = st[k[0]].filter(function (x) { return x !== v; });
+    if (k[0] === 'dep' || k[0] === 'arr') st[k[0]][+v] = [];
     sync(); counts(); apply();
   });
   function sync() {
     $$('[data-f]').forEach(function (i) {
       var f = i.dataset.f;
       if (f === 'stops') i.checked = st.stops.indexOf(+i.value) >= 0;
-      if (f === 'air') i.checked = st.air.indexOf(i.value) >= 0;
-      if (['bag', 'refund', 'change'].indexOf(f) >= 0) i.checked = st[f];
+      else if (['air', 'all', 'via', 'aps'].indexOf(f) >= 0) i.checked = st[f].indexOf(i.value) >= 0;
+      else if (LBL[f]) i.checked = st[f];
     });
-    $$('.tslots').forEach(function (g) { var l = +g.dataset.leg; $$('button', g).forEach(function (b) { b.classList.toggle('on', st.slots[l].indexOf(+b.dataset.t) >= 0); }); });
+    $$('.tslots').forEach(function (g) { var l = +g.dataset.leg, kind = g.dataset.kind; $$('button', g).forEach(function (b) { b.classList.toggle('on', st[kind][l].indexOf(+b.dataset.t) >= 0); }); });
   }
 
   /* ---------- inputs ---------- */
@@ -190,26 +256,28 @@
     i.addEventListener('change', function () {
       var f = i.dataset.f, v = i.value;
       if (f === 'stops') st.stops = i.checked ? st.stops.concat(+v) : st.stops.filter(function (s) { return s !== +v; });
-      if (f === 'air') st.air = i.checked ? st.air.concat(v) : st.air.filter(function (a) { return a !== v; });
-      if (['bag', 'refund', 'change'].indexOf(f) >= 0) st[f] = i.checked;
+      else if (['air', 'all', 'via', 'aps'].indexOf(f) >= 0) st[f] = i.checked ? st[f].concat(v) : st[f].filter(function (a) { return a !== v; });
+      else if (LBL[f]) st[f] = i.checked;
       counts(); apply();
     });
   }
-  $$('.hs-filters [data-f]').forEach(bind);
+  $$('.hs-filters > .fgrp [data-f]').forEach(bind);
   $$('.tslots button').forEach(function (b) {
     b.addEventListener('click', function () {
-      var l = +b.parentNode.dataset.leg, t = +b.dataset.t, a = st.slots[l];
-      st.slots[l] = a.indexOf(t) >= 0 ? a.filter(function (x) { return x !== t; }) : a.concat(t);
+      var g = b.parentNode, l = +g.dataset.leg, kind = g.dataset.kind, t = +b.dataset.t, a = st[kind][l];
+      st[kind][l] = a.indexOf(t) >= 0 ? a.filter(function (x) { return x !== t; }) : a.concat(t);
       sync(); counts(); apply();
     });
   });
   $('#fPrice').addEventListener('input', function (e) { var v = +e.target.value; st.maxPrice = v < pMax ? v : null; $('#fPriceL').textContent = fmt(v, 0); counts(); apply(); });
   $('#fDur').addEventListener('input', function (e) { var v = +e.target.value; st.maxDur = v < dMax ? v : null; $('#fDurL').textContent = hm(v); counts(); apply(); });
-  $$('#flSorts button').forEach(function (b) { b.addEventListener('click', function () { st.sort = b.dataset.s; $$('#flSorts button').forEach(function (x) { x.classList.toggle('on', x === b); }); apply(); }); });
+  $('#fLay').addEventListener('input', function (e) { var v = +e.target.value; st.maxLay = v < +e.target.max ? v : null; $('#fLayL').textContent = hm(v); counts(); apply(); });
+  $$('#flSorts button').forEach(function (b) { b.addEventListener('click', function () { st.sort = b.dataset.s; st.sort2 = ''; $('#flSort2').value = ''; $$('#flSorts button').forEach(function (x) { x.classList.toggle('on', x === b); }); apply(); }); });
+  $('#flSort2').addEventListener('change', function (e) { st.sort2 = e.target.value; $$('#flSorts button').forEach(function (x) { x.classList.toggle('on', !st.sort2 && x.dataset.s === st.sort); }); apply(); });
   more.addEventListener('click', page);
   $('#fReset').addEventListener('click', function () {
-    st = { stops: [], maxPrice: null, bag: false, refund: false, change: false, slots: [[], []], maxDur: null, air: [], sort: st.sort };
-    if (all.length) { $('#fPrice').value = pMax; $('#fPriceL').textContent = fmt(pMax, 0); $('#fDur').value = dMax; $('#fDurL').textContent = hm(dMax); }
+    st = fresh(st.sort);
+    if (all.length) { $('#fPrice').value = pMax; $('#fPriceL').textContent = fmt(pMax, 0); $('#fDur').value = dMax; $('#fDurL').textContent = hm(dMax); $('#fLay').value = $('#fLay').max; $('#fLayL').textContent = hm(lMax); }
     sync(); counts(); apply();
   });
   $('#mFilter').addEventListener('click', function () { $('#flSide').classList.toggle('open'); });

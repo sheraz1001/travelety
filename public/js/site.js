@@ -38,10 +38,16 @@
     dep.addEventListener('change', () => { if (ret.value < dep.value) ret.value = fmt(addDays(7, dep.value)); ret.min = dep.value; });
 
     const retField = ret.closest('.field');
-    $$('input[name=trip]', box).forEach(r => r.addEventListener('change', () => {
-      const ow = $('input[name=trip]:checked', box).value === 'ow';
+    const mcForm = $('.mc-form', box);
+    const applyTrip = () => {
+      const t = ($('input[name=trip]:checked', box) || {}).value || 'rt';
+      const ow = t === 'ow';
       retField.style.opacity = ow ? .4 : 1; ret.disabled = ow;
-    }));
+      if (mcForm) { mcForm.hidden = t !== 'mc'; form.hidden = t === 'mc'; }
+    };
+    $$('input[name=trip]', box).forEach(r => r.addEventListener('change', applyTrip));
+    applyTrip();
+    if (mcForm) initMulti(mcForm, form);
 
     const sel = {};
     const pickers = {};
@@ -86,9 +92,15 @@
     }));
 
     // Passengers
-    const pax = { adults: 1, children: 0, infants: 0 };
+    const pax = { adults: +($('[name=adults]', form).value || 1), children: +($('[name=children]', form).value || 0), infants: +($('[name=infants]', form).value || 0) };
     const pop = $('.pax-pop', form), label = $('.pax-label', form), cabin = $('[name=cabin]', form);
-    const paxText = () => { const n = pax.adults + pax.children + pax.infants; label.value = `${n} traveller${n > 1 ? 's' : ''}, ${cabin.value === '1' ? 'Business' : 'Economy'}`; };
+    const CAB = { '0': 'Economy', '1': 'Business', '2': 'First', '3': 'Premium economy' };
+    const paxText = () => {
+      const n = pax.adults + pax.children + pax.infants, txt = `${n} traveller${n > 1 ? 's' : ''}, ${CAB[cabin.value] || 'Economy'}`;
+      label.value = txt;
+      if (mcForm) { ['adults', 'children', 'infants'].forEach(k => $(`[name=${k}]`, mcForm).value = pax[k]); $('[name=cabin]', mcForm).value = cabin.value; }
+    };
+    $$('.stepper', pop).forEach(s => { s.children[1].textContent = pax[s.dataset.k]; });
     label.addEventListener('click', e => { e.stopPropagation(); pop.style.display = pop.style.display === 'block' ? 'none' : 'block'; });
     pop.addEventListener('click', e => e.stopPropagation());
     document.addEventListener('click', () => pop.style.display = 'none');
@@ -99,11 +111,74 @@
       plus.onclick = () => { if (pax.adults + pax.children + pax.infants < 9 && !(k === 'infants' && pax.infants >= pax.adults)) pax[k]++; upd(); };
     });
     cabin.addEventListener('change', paxText);
+    paxText();
 
     form.addEventListener('submit', e => {
       if (!$('[name=from]', form).value) { e.preventDefault(); $('[data-ac=from] input', form).focus(); return; }
       if (!$('[name=to]', form).value) { e.preventDefault(); $('[data-ac=to] input', form).focus(); }
     });
+  }
+
+  /* Airport autocomplete on any .field[data-ac2] holding a visible input + hidden [data-code] */
+  function airportField(wrap) {
+    const input = $('input:not([type=hidden])', wrap), list = $('.ac', wrap), hint = $('small', wrap), hidden = $('[data-code]', wrap);
+    let idx = -1, items = [];
+    const render = q => {
+      q = q.trim().toLowerCase();
+      items = !q ? AIRPORTS.slice(0, 8) : AIRPORTS.filter(a => a[0].toLowerCase() === q || a[1].toLowerCase().startsWith(q) || a[2].toLowerCase().includes(q) || a[3].toLowerCase().startsWith(q)).slice(0, 8);
+      if (!items.length && /^[a-z]{3}$/i.test(q)) items = [[q.toUpperCase(), q.toUpperCase(), 'Airport code', '']];
+      list.innerHTML = items.map((a, i) => `<div data-i="${i}"><b>${a[1]} <small style="color:var(--muted);font-weight:400">${a[2]}</small></b><span>${a[0]}</span></div>`).join('');
+      list.style.display = items.length ? 'block' : 'none'; idx = -1;
+    };
+    const pick = a => { hidden.value = a[0]; input.value = a[1]; hint.textContent = `${a[0]} · ${a[2]}`; list.style.display = 'none'; wrap.dispatchEvent(new CustomEvent('picked', { bubbles: true, detail: a })); };
+    input.addEventListener('focus', () => { input.select(); render(''); });
+    input.addEventListener('input', () => { hidden.value = ''; render(input.value); });
+    input.addEventListener('keydown', e => {
+      const els = [...list.children];
+      if (e.key === 'ArrowDown') { idx = Math.min(idx + 1, els.length - 1); e.preventDefault(); }
+      else if (e.key === 'ArrowUp') { idx = Math.max(idx - 1, 0); e.preventDefault(); }
+      else if (e.key === 'Enter' && list.style.display === 'block') { e.preventDefault(); pick(items[Math.max(idx, 0)]); return; }
+      els.forEach((el, i) => el.classList.toggle('hi', i === idx));
+    });
+    list.addEventListener('mousedown', e => { const d = e.target.closest('[data-i]'); if (d) pick(items[+d.dataset.i]); });
+    input.addEventListener('blur', () => setTimeout(() => { list.style.display = 'none'; if (!hidden.value && items[0] && input.value) pick(items[0]); }, 150));
+    return { pick };
+  }
+
+  function initMulti(form, main) {
+    const rows = $('.mc-rows', form), MAX = 5;
+    const today = fmt(new Date());
+    const renumber = () => {
+      $$('.mc-row', rows).forEach((r, i) => {
+        $('.mc-n', r).textContent = 'Flight ' + (i + 1);
+        $$('[name^="legs["]', r).forEach(inp => inp.name = inp.name.replace(/legs\[\d+\]/, `legs[${i}]`));
+        const d = $('input[type=date]', r), prev = r.previousElementSibling && $('input[type=date]', r.previousElementSibling);
+        d.min = prev && prev.value ? prev.value : today;
+        if (!d.value) d.value = prev && prev.value ? fmt(addDays(3, prev.value)) : fmt(addDays(14));
+        $('.mc-del', r).style.visibility = $$('.mc-row', rows).length > 2 ? 'visible' : 'hidden';
+      });
+      $('.mc-add', form).disabled = $$('.mc-row', rows).length >= MAX;
+    };
+    const wire = r => { $$('[data-ac2]', r).forEach(airportField); $('.mc-del', r).addEventListener('click', () => { r.remove(); renumber(); }); };
+    $$('.mc-row', rows).forEach(wire);
+    rows.addEventListener('picked', e => {
+      const row = e.target.closest('.mc-row'), fields = $$('[data-ac2]', row);
+      if (e.target === fields[1]) { const next = row.nextElementSibling; if (next) { const nf = $('[data-ac2]', next), nh = $('[data-code]', nf); if (!nh.value) { nh.value = e.detail[0]; $('input:not([type=hidden])', nf).value = e.detail[1]; $('small', nf).textContent = `${e.detail[0]} · ${e.detail[2]}`; } } }
+    });
+    rows.addEventListener('change', e => { if (e.target.type === 'date') renumber(); });
+    $('.mc-add', form).addEventListener('click', () => {
+      const last = $$('.mc-row', rows).pop(), clone = last.cloneNode(true);
+      $$('input', clone).forEach(i => { if (i.type !== 'date') i.value = ''; else i.value = ''; });
+      $$('[data-ac2] small', clone).forEach(sm => sm.textContent = 'City or airport');
+      const lastTo = $$('[data-ac2]', last)[1], nf = $('[data-ac2]', clone);
+      if ($('[data-code]', lastTo).value) { $('[data-code]', nf).value = $('[data-code]', lastTo).value; $('input:not([type=hidden])', nf).value = $('input:not([type=hidden])', lastTo).value; $('small', nf).textContent = $('small', lastTo).textContent; }
+      rows.appendChild(clone); wire(clone); renumber();
+    });
+    form.addEventListener('submit', e => {
+      const bad = $$('[data-code]', form).find(h => !h.value);
+      if (bad) { e.preventDefault(); $('input:not([type=hidden])', bad.closest('.field')).focus(); }
+    });
+    renumber();
   }
 
   function initHotels(form) {
@@ -112,7 +187,7 @@
     hin.value = hin.value || fmt(addDays(14));
     hout.value = hout.value || fmt(addDays(17));
     hin.addEventListener('change', () => { if (hout.value <= hin.value) hout.value = fmt(addDays(3, hin.value)); hout.min = hin.value; });
-    form.addEventListener('submit', e => { const c = $('[name=city]', form); if (!c.value.trim()) { e.preventDefault(); c.focus(); } });
+    form.addEventListener('submit', e => { const c = $('[name=city]', form) || $('[name=q]', form); if (c && !c.value.trim()) { e.preventDefault(); c.focus(); } });
   }
 
   // Fare month bars: click to search that month

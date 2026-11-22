@@ -50,11 +50,37 @@ class FlightBookingController extends Controller
         }
         $cur = strtoupper((string) ($r->query('currency') ?: Setting::get('hotel_currency') ?: 'USD'));
 
-        return compact('from', 'to', 'depart', 'ret', 'adults', 'children', 'infants', 'cabin', 'country') + ['currency' => preg_match('/^[A-Z]{3}$/', $cur) ? $cur : 'USD'];
+        // Multi-city: legs[i][from|to|date]
+        $mc = [];
+        foreach (array_slice((array) $r->query('legs', []), 0, 6) as $l) {
+            $f = $code($l['from'] ?? null);
+            $t = $code($l['to'] ?? null);
+            $dt = $date($l['date'] ?? null);
+            if ($f && $t && $dt && $f !== $t) {
+                $mc[] = ['from' => $f, 'to' => $t, 'date' => Carbon::parse($dt)->lt(today()) ? today()->addDay()->toDateString() : $dt];
+            }
+        }
+        if (count($mc) >= 2) {
+            $from = $mc[0]['from'];
+            $to = end($mc)['to'];
+            $depart = $mc[0]['date'];
+            $ret = null;
+        } else {
+            $mc = [];
+        }
+
+        return compact('from', 'to', 'depart', 'ret', 'adults', 'children', 'infants', 'cabin', 'country', 'mc') + ['currency' => preg_match('/^[A-Z]{3}$/', $cur) ? $cur : 'USD'];
     }
 
     protected function qs(array $p): array
     {
+        if ($p['mc']) {
+            return array_filter([
+                'legs' => $p['mc'], 'adults' => $p['adults'], 'children' => $p['children'] ?: null, 'infants' => $p['infants'] ?: null,
+                'cabin' => $p['cabin'] !== 'ECONOMY' ? $p['cabin'] : null,
+            ], fn ($v) => $v !== null && $v !== '');
+        }
+
         return array_filter([
             'from' => $p['from'], 'to' => $p['to'], 'depart' => $p['depart'], 'return' => $p['ret'],
             'adults' => $p['adults'], 'children' => $p['children'] ?: null, 'infants' => $p['infants'] ?: null,
@@ -70,9 +96,15 @@ class FlightBookingController extends Controller
         $p = $this->params($r);
         $fromA = Airport::byCode($p['from']);
         $toA = $p['to'] ? Airport::byCode($p['to']) : null;
+        $names = [];
+        foreach ($p['mc'] as $l) {
+            foreach ([$l['from'], $l['to']] as $c) {
+                $names[$c] ??= Airport::byCode($c)?->city ?? $c;
+            }
+        }
 
         return view('flights.search', [
-            'p' => $p, 'qs' => $this->qs($p), 'fromA' => $fromA, 'toA' => $toA,
+            'p' => $p, 'qs' => $this->qs($p), 'fromA' => $fromA, 'toA' => $toA, 'names' => $names,
             'sandbox' => $this->api->mode() === 'sandbox',
         ]);
     }
@@ -81,12 +113,16 @@ class FlightBookingController extends Controller
     {
         abort_unless($this->api->enabled(), 404);
         $p = $this->params($r);
-        if (! $p['to'] || $p['to'] === $p['from']) {
-            return response()->json(['journeys' => [], 'error' => 'Choose where you are flying to.']);
-        }
-        $legs = [['origin' => $p['from'], 'destination' => $p['to'], 'date' => $p['depart'], 'direction' => 'OUTBOUND']];
-        if ($p['ret']) {
-            $legs[] = ['origin' => $p['to'], 'destination' => $p['from'], 'date' => $p['ret'], 'direction' => 'INBOUND'];
+        if ($p['mc']) {
+            $legs = array_map(fn ($l) => ['origin' => $l['from'], 'destination' => $l['to'], 'date' => $l['date']], $p['mc']);
+        } else {
+            if (! $p['to'] || $p['to'] === $p['from']) {
+                return response()->json(['journeys' => [], 'error' => 'Choose where you are flying to.']);
+            }
+            $legs = [['origin' => $p['from'], 'destination' => $p['to'], 'date' => $p['depart'], 'direction' => 'OUTBOUND']];
+            if ($p['ret']) {
+                $legs[] = ['origin' => $p['to'], 'destination' => $p['from'], 'date' => $p['ret'], 'direction' => 'INBOUND'];
+            }
         }
         $res = $this->api->flightSearch($legs, $p['adults'], $p['children'], $p['infants'], $p['cabin'], $p['currency'], $p['country']);
 
@@ -196,11 +232,80 @@ class FlightBookingController extends Controller
         $d['secret_key'] = $pb['secretKey'] ?? null;
         $d['price_before'] = $order->amount;
         $d['ticket_limit'] = $pb['booking']['order']['ticketLimitTime'] ?? null;
+        $d['services'] = LiteApi::compactServices($pb['servicesAttachable'] ?? []);
+        $d['base_price'] = (float) ($pb['price'] ?? $order->amount);
+        $d['extras'] = [];
         $newPrice = (float) ($pb['price'] ?? ($pb['booking']['pricing']['totalAmount'] ?? $order->amount));
         $order->update([
             'customer_name' => $contact['firstName'].' '.$contact['lastName'], 'email' => $contact['email'],
             'phone' => '+'.$contact['phoneCountryCode'].' '.$contact['phoneNumber'],
             'amount' => $newPrice, 'currency' => $pb['currency'] ?? $order->currency,
+            'gateway_ref' => $d['transaction_id'], 'details' => $d,
+        ]);
+
+        $sv = $d['services'];
+        $hasExtras = ! empty($sv['seats']) || ! empty($sv['bags']) || ! empty($sv['meals']);
+
+        return redirect()->route('flights.checkout', [$order, 'step' => $hasExtras ? 'extras' : 'pay']);
+    }
+
+    /** Seats / bags / meals chosen on the extras step → attach to prebook → new payment intent. */
+    public function extras(Request $r, Order $order)
+    {
+        abort_unless($order->type === 'flight' && $order->status === 'pending_payment', 404);
+        $d = $order->details;
+        abort_unless(! empty($d['prebook_id']), 404);
+        $sv = $d['services'] ?? [];
+        $nPax = count($d['passengers'] ?? []);
+        $index = [];
+        foreach ($sv['seats'] ?? [] as $seg => $list) {
+            foreach ($list as $x) {
+                $index[$x['id']] = ['kind' => 'seat', 'label' => 'Seat '.$x['n'], 'price' => $x['price'], 'seg' => $seg, 'a' => $x['a']];
+            }
+        }
+        foreach ($sv['bags'] ?? [] as $x) {
+            $index[$x['id']] = ['kind' => 'bag', 'label' => $x['name'], 'price' => $x['price'], 'seg' => $x['seg'], 'a' => true];
+        }
+        foreach ($sv['meals'] ?? [] as $x) {
+            $index[$x['id']] = ['kind' => 'meal', 'label' => $x['name'], 'price' => $x['price'], 'seg' => $x['seg'], 'a' => true];
+        }
+
+        $sel = [];
+        $summary = [];
+        $usedSeats = [];
+        foreach ((array) $r->input('svc', []) as $pi => $items) {
+            $pi = (int) $pi;
+            if ($pi < 0 || $pi >= $nPax) {
+                continue;
+            }
+            foreach ((array) $items as $slot => $id) {
+                if (! $id || ! isset($index[$id]) || ! $index[$id]['a']) {
+                    continue;
+                }
+                if ($index[$id]['kind'] === 'seat') {
+                    if (($d['passengers'][$pi]['passengerType'] ?? 0) === 2 || isset($usedSeats[$id])) {
+                        continue;
+                    }
+                    $usedSeats[$id] = true;
+                }
+                $sel[] = ['passengerIndex' => $pi, 'serviceId' => $id, 'quantity' => 1];
+                $summary[] = ['pax' => $pi, 'kind' => $index[$id]['kind'], 'label' => $index[$id]['label'], 'price' => $index[$id]['price'], 'seg' => $index[$id]['seg']];
+            }
+        }
+
+        if (! $sel && empty($d['extras'])) {
+            return redirect()->route('flights.checkout', [$order, 'step' => 'pay']);
+        }
+        $res = $this->api->flightServices($d['prebook_id'], $sel);
+        if (isset($res['error'])) {
+            return back()->with('fl_error', 'Some extras could not be added: '.$res['error'].' Please try a different seat or bag, or skip.');
+        }
+        $pb = $res['data'];
+        $d['transaction_id'] = $pb['transactionId'] ?? $d['transaction_id'];
+        $d['secret_key'] = $pb['secretKey'] ?? $d['secret_key'];
+        $d['extras'] = $summary;
+        $order->update([
+            'amount' => (float) ($pb['price'] ?? ($d['base_price'] + array_sum(array_column($summary, 'price')))),
             'gateway_ref' => $d['transaction_id'], 'details' => $d,
         ]);
 

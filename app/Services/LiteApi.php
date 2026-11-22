@@ -277,7 +277,7 @@ class LiteApi
         $offers = [];
         $journeys = [];
         foreach ($data['journeys'] ?? [] as $j) {
-            $n = $this->normJourney($j, $offers);
+            $n = $this->normJourney($j, $offers, $legs);
             if ($n) {
                 $journeys[] = $n;
             }
@@ -298,38 +298,80 @@ class LiteApi
         return Cache::get('lite.fl.'.$hash);
     }
 
-    protected function normJourney(array $j, array &$offers): ?array
+    /** Split a journey's flat segment list into the requested legs. */
+    protected function splitLegs(array $segs, array $req): array
     {
-        $segs = collect($j['segments'] ?? []);
-        if ($segs->isEmpty() || empty($j['offers'])) {
+        $out = [];
+        $k = 0;
+        $cur = [];
+        $n = count($segs);
+        foreach ($segs as $i => $s) {
+            $cur[] = $s;
+            $next = $segs[$i + 1] ?? null;
+            $want = $req[$k]['destination'] ?? null;
+            $nextReq = $req[$k + 1] ?? null;
+            $ends = ! $next
+                || ($want && strtoupper($s['destinationCode']) === strtoupper($want))
+                || ($nextReq && substr($next['departureTime'], 0, 10) >= $nextReq['date']
+                    && (strtotime($next['departureTime']) - strtotime($s['arrivalTime'])) >= 6 * 3600);
+            if ($ends && $k < count($req) - 1 && $next) {
+                $out[] = $cur;
+                $cur = [];
+                $k++;
+            }
+        }
+        if ($cur) {
+            $out[] = $cur;
+        }
+
+        return $out;
+    }
+
+    protected function normJourney(array $j, array &$offers, array $req = []): ?array
+    {
+        $all = $j['segments'] ?? [];
+        if (! $all || empty($j['offers'])) {
             return null;
         }
+        $groups = $req ? $this->splitLegs($all, $req) : collect($all)->groupBy(fn ($s) => $s['direction'] ?? 'OUTBOUND')->map->values()->values()->all();
+        $multi = count($req) > 2 || (count($req) === 2 && ($req[1]['direction'] ?? '') !== 'INBOUND');
         $legs = [];
-        foreach ($segs->groupBy(fn ($s) => $s['direction'] ?? 'OUTBOUND') as $dir => $ss) {
-            $ss = $ss->values();
+        foreach ($groups as $li => $ss) {
+            $ss = collect($ss)->values();
             $first = $ss->first();
             $last = $ss->last();
-            $ld = collect($j['legDurations'] ?? [])->firstWhere('direction', $dir) ?? [];
-            $layovers = collect($j['connections'] ?? [])->where('direction', $dir)->map(fn ($c) => [
-                'code' => $c['arrivalAirportCode'] ?? '', 'name' => $c['arrivalAirportName'] ?? '',
-                'min' => $c['duration']['minutes'] ?? 0, 'changeAirport' => (bool) ($c['changeAirport'] ?? false), 'overnight' => (bool) ($c['overnight'] ?? false),
-            ])->values()->all();
+            $ld = $j['legDurations'][$li] ?? [];
+            $layovers = [];
+            for ($x = 0; $x < $ss->count() - 1; $x++) {
+                $a = $ss[$x];
+                $b = $ss[$x + 1];
+                $layovers[] = [
+                    'code' => $a['destinationCode'], 'name' => $a['destinationName'] ?? '',
+                    'min' => (int) round((strtotime($b['departureTime']) - strtotime($a['arrivalTime'])) / 60),
+                    'changeAirport' => $a['destinationCode'] !== $b['originCode'],
+                    'overnight' => substr($a['arrivalTime'], 0, 10) !== substr($b['departureTime'], 0, 10),
+                ];
+            }
+            $dep = $first['departureTime'];
+            $arr = $last['arrivalTime'];
             $legs[] = [
-                'dir' => $dir,
+                'dir' => $multi ? 'LEG'.($li + 1) : ($li ? 'INBOUND' : 'OUTBOUND'),
                 'from' => $first['originCode'], 'fromName' => $first['originName'] ?? '',
                 'to' => $last['destinationCode'], 'toName' => $last['destinationName'] ?? '',
-                'dep' => $first['departureTime'], 'arr' => $last['arrivalTime'],
-                'min' => $ld['duration']['minutes'] ?? null,
-                'dayChange' => $ld['dayChange'] ?? 0,
+                'dep' => $dep, 'arr' => $arr,
+                'min' => $ld['duration']['minutes'] ?? $ss->sum(fn ($s) => $s['duration']['minutes'] ?? 0) + collect($layovers)->sum('min'),
+                'dayChange' => $ld['dayChange'] ?? max(0, (int) ((strtotime(substr($arr, 0, 10)) - strtotime(substr($dep, 0, 10))) / 86400)),
                 'stops' => max(0, $ss->count() - 1) + $ss->sum(fn ($s) => $s['stopCount'] ?? 0),
                 'layovers' => $layovers,
                 'carriers' => $ss->map(fn ($s) => ['code' => $s['carrier']['marketingCode'] ?? '', 'name' => $s['carrier']['marketingName'] ?? '', 'logo' => $s['carrier']['marketingLogo'] ?? null])->unique('code')->values()->all(),
                 'segments' => $ss->map(fn ($s) => [
+                    'key' => $s['segmentKey'] ?? null,
                     'from' => $s['originCode'], 'fromName' => $s['originName'] ?? '', 'to' => $s['destinationCode'], 'toName' => $s['destinationName'] ?? '',
                     'dep' => $s['departureTime'], 'arr' => $s['arrivalTime'], 'min' => $s['duration']['minutes'] ?? null,
                     'flight' => ($s['carrier']['marketingCode'] ?? '').' '.($s['flight']['marketingNumber'] ?? ''),
                     'airline' => $s['carrier']['marketingName'] ?? '', 'logo' => $s['carrier']['marketingLogo'] ?? null,
                     'operatedBy' => ($s['carrier']['operatingCode'] ?? '') !== ($s['carrier']['marketingCode'] ?? '') ? ($s['carrier']['operatingName'] ?? null) : null,
+                    'aircraft' => $s['aircraft']['name'] ?? ($s['aircraftType'] ?? null),
                 ])->all(),
             ];
         }
@@ -406,5 +448,47 @@ class LiteApi
         }
 
         return is_array($x) ? ($x['booking'] ?? $x) : null;
+    }
+
+    /** Replace the prebook's ancillary selection (seats/bags/meals). Returns new transaction + price. */
+    public function flightServices(string $prebookId, array $selected): array
+    {
+        $r = $this->call('POST', self::API.'/flights/prebooks/'.$prebookId.'/services', ['selectedServices' => array_values($selected)], 90);
+        if (isset($r['data'][0])) {
+            return ['data' => $r['data'][0]];
+        }
+
+        return ['error' => $r['_json']['error']['description'] ?? ($r['_error'] ?? 'Could not add the extras.')];
+    }
+
+    /** Compact the prebook's servicesAttachable into seats per segment, bags and meals. */
+    public static function compactServices(array $sa): array
+    {
+        $out = ['seats' => [], 'bags' => [], 'meals' => [], 'expires' => $sa['expiresAt'] ?? null];
+        foreach ($sa['groups'] ?? [] as $g) {
+            foreach ($g['services'] ?? [] as $sv) {
+                $cat = $sv['category'] ?? $g['category'] ?? '';
+                $price = (float) ($sv['pricing']['display']['amount'] ?? 0);
+                $base = ['id' => $sv['serviceId'], 'seg' => $sv['segmentKey'] ?? null, 'price' => $price, 'pt' => $sv['passengerType'] ?? 'ALL'];
+                if ($cat === 'seat') {
+                    $m = $sv['metadata']['seat'] ?? [];
+                    if (! isset($m['seatRow']) && preg_match('/\b(\d+)([A-Za-z]+)\b/', $sv['name'] ?? '', $mm)) {
+                        $m += ['seatRow' => (int) $mm[1], 'seatColumn' => strtoupper($mm[2]), 'seatNumber' => $mm[1].strtoupper($mm[2]), 'available' => true];
+                    }
+                    if (! isset($m['seatRow'])) {
+                        continue;
+                    }
+                    $out['seats'][$base['seg']][] = $base + ['r' => (int) $m['seatRow'], 'c' => (string) ($m['seatColumn'] ?? ''), 'n' => $m['seatNumber'] ?? ($m['seatRow'].($m['seatColumn'] ?? '')),
+                        't' => $m['seatType'] ?? 'standard', 'pos' => $m['position'] ?? null, 'a' => (bool) ($m['available'] ?? true)];
+                } elseif ($cat === 'baggage') {
+                    $b = $sv['metadata']['baggage'] ?? [];
+                    $out['bags'][] = $base + ['name' => ucwords(strtolower($sv['name'] ?? 'Extra bag')), 'kg' => $b['weightKg'] ?? null, 'pieces' => $b['pieces'] ?? 1, 'type' => $b['bagType'] ?? 'checked'];
+                } elseif ($cat === 'meal') {
+                    $out['meals'][] = $base + ['name' => ucwords(strtolower($sv['name'] ?? 'Meal'))];
+                }
+            }
+        }
+
+        return $out;
     }
 }

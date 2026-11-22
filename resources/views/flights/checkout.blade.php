@@ -4,6 +4,10 @@
 @php
   $I = fn($n,$sw=1.9) => view('partials.icon',['n'=>$n,'sw'=>$sw])->render();
   $pay = request('step') === 'pay' && ! empty($d['prebook_id']) && ! empty($d['secret_key']);
+  $extrasStep = request('step') === 'extras' && ! empty($d['prebook_id']);
+  $sv = $d['services'] ?? [];
+  $segInfo = [];
+  foreach (($d['journey']['legs'] ?? []) as $li => $l) foreach ($l['segments'] as $sg) if (!empty($sg['key'])) $segInfo[$sg['key']] = ['from' => $sg['from'], 'to' => $sg['to'], 'flight' => $sg['flight'], 'dep' => $sg['dep'], 'leg' => $li];
   $legs = $d['journey']['legs'] ?? [];
   $off = $d['offer'] ?? [];
   $types = array_merge(array_fill(0, $d['adults'] ?? 1, 0), array_fill(0, $d['children'] ?? 0, 1), array_fill(0, $d['infants'] ?? 0, 2));
@@ -16,11 +20,46 @@
 @section('content')
 <div class="wrap hs-wrap co">
   @if($sandbox)<div class="hs-test">Test mode: use card 4242 4242 4242 4242, any future date and any CVC. No ticket is issued.</div>@endif
-  <div class="co-steps"><span class="on">1 · Passengers</span><span class="{{ $pay ? 'on' : '' }}">2 · Payment</span><span>3 · Ticket</span></div>
+  <div class="co-steps"><span class="on">1 · Passengers</span><span class="{{ $extrasStep || $pay ? 'on' : '' }}">2 · Seats &amp; bags</span><span class="{{ $pay ? 'on' : '' }}">3 · Payment</span><span>4 · Ticket</span></div>
 
   <div class="co-grid">
     <main>
-      @if(! $pay)
+      @if($extrasStep)
+      <form class="co-card" method="post" action="{{ route('flights.extras', $o) }}" id="xForm">
+        @csrf
+        <h2>Seats, bags &amp; meals</h2>
+        <p class="note">Optional. Choose now or skip — you can usually add these later with the airline.</p>
+        @if(session('fl_error'))<div class="hs-alert">{{ session('fl_error') }}</div>@endif
+        <div class="xpax" id="xPax">@foreach($d['passengers'] as $pi => $pp)<button type="button" data-p="{{ $pi }}" class="{{ $pi ? '' : 'on' }}" @if($pp['passengerType']===2) data-infant="1" @endif>{{ $pp['firstName'] }} {{ substr($pp['lastName'],0,1) }}.<small>{{ ['Adult','Child','Infant'][$pp['passengerType']] }}</small></button>@endforeach</div>
+
+        @if(!empty($sv['seats']))
+        <section class="xsec"><h3>{!! $I('user') !!} Choose seats</h3>
+          <div class="xsegs" id="xSegs">@foreach(array_keys($sv['seats']) as $k => $seg)<button type="button" data-s="{{ $seg }}" class="{{ $k ? '' : 'on' }}">{{ $segInfo[$seg]['from'] ?? '' }} → {{ $segInfo[$seg]['to'] ?? '' }}<small>{{ $segInfo[$seg]['flight'] ?? '' }}</small></button>@endforeach</div>
+          <div class="seatmap-wrap"><div class="seat-legend" id="xLegend"></div><div class="seatmap" id="xMap"></div></div>
+          <p class="note" id="xSeatNote"></p>
+        </section>
+        @endif
+
+        @if(!empty($sv['bags']))
+        <section class="xsec"><h3>{!! $I('wallet') !!} Extra baggage</h3>
+          <div id="xBags"></div>
+        </section>
+        @endif
+
+        @if(!empty($sv['meals']))
+        <section class="xsec"><h3>Meals &amp; drinks</h3>
+          <div id="xMeals"></div>
+        </section>
+        @endif
+
+        <div id="xInputs"></div>
+        <div class="xfoot">
+          <div><span class="note">Extras total</span><b id="xTotal">{{ $o->currency }} 0.00</b></div>
+          <a class="hbtn hbtn-ghost" href="{{ route('flights.checkout', [$o, 'step' => 'pay']) }}">Skip</a>
+          <button class="hbtn hbtn-orange" type="submit" id="xGo">Continue to payment {!! $I('arrow') !!}</button>
+        </div>
+      </form>
+      @elseif(! $pay)
       <form class="co-card" method="post" action="{{ route('flights.passengers', $o) }}" id="paxForm">
         @csrf
         <h2>Who's travelling?</h2>
@@ -73,7 +112,7 @@
       <div class="co-card">
         <h2>Payment</h2>
         <p class="note">Booking for {{ count($d['passengers'] ?? []) }} passenger{{ count($d['passengers'] ?? [])>1?'s':'' }} · {{ $o->email }}</p>
-        @if(($d['price_before'] ?? $o->amount) != $o->amount)<div class="hs-alert">The airline updated the fare from {{ $o->currency }} {{ number_format($d['price_before'],2) }} to <b>{{ $o->money() }}</b>. This is the final price.</div>@endif
+        @if(abs(($d['price_before'] ?? 0) - ($d['base_price'] ?? $d['price_before'] ?? 0)) > 0.01)<div class="hs-alert">The airline updated the fare from {{ $o->currency }} {{ number_format($d['price_before'],2) }} to {{ $o->currency }} {{ number_format($d['base_price'],2) }} before extras. The total below is final.</div>@endif
         <div id="payment-element" class="co-pay"><p class="note">Loading secure payment…</p></div>
         <p class="note co-secure">{!! $I('shield') !!} Your card details are encrypted and processed by our certified payment partner. We never see or store your card number.</p>
       </div>
@@ -85,7 +124,7 @@
         <h3>Your trip</h3>
         @foreach($legs as $l)
           <div class="sum-leg">
-            <p class="note">{{ $l['dir']==='INBOUND' ? 'Return' : 'Outbound' }} · {{ \Carbon\Carbon::parse($l['dep'])->format('D j M') }}</p>
+            <p class="note">{{ $l['dir']==='INBOUND' ? 'Return' : (str_starts_with($l['dir'],'LEG') ? 'Flight '.substr($l['dir'],3) : 'Outbound') }} · {{ \Carbon\Carbon::parse($l['dep'])->format('D j M') }}</p>
             <div class="sl-row">
               @if(!empty($l['carriers'][0]['logo']))<img src="{{ $l['carriers'][0]['logo'] }}" alt="">@endif
               <div><b>{{ substr($l['dep'],11,5) }} {{ $l['from'] }} → {{ substr($l['arr'],11,5) }} {{ $l['to'] }}</b>@if($l['dayChange'])<sup>+{{ $l['dayChange'] }}</sup>@endif
@@ -102,6 +141,9 @@
             <li>{{ !empty($off['refundable']) ? '✓ Refundable (fees may apply)' : '✕ Non-refundable' }}</li>
           </ul>
         </div>
+        @if(!empty($d['extras']))
+          <div class="sum-fare"><b>Extras</b><ul>@foreach($d['extras'] as $x)<li>{{ $d['passengers'][$x['pax']]['firstName'] ?? '' }} · {{ $x['label'] }}{{ isset($segInfo[$x['seg']]) ? ' ('.$segInfo[$x['seg']]['from'].'–'.$segInfo[$x['seg']]['to'].')' : '' }} · {{ $o->currency }} {{ number_format($x['price'],2) }}</li>@endforeach</ul></div>
+        @endif
         <div class="co-total"><span>Total ({{ count($types) }} traveller{{ count($types)>1?'s':'' }})</span><b>{{ $o->money() }}</b></div>
         <p class="note">Taxes and fees included.</p>
       </div>
@@ -111,6 +153,14 @@
 @endsection
 
 @push('scripts')
+@if($extrasStep)
+@php
+  $flx = ['seats' => $sv['seats'] ?? new \stdClass, 'bags' => $sv['bags'] ?? [], 'meals' => $sv['meals'] ?? [], 'segs' => $segInfo, 'cur' => $o->currency, 'pax' => []];
+  foreach ($d['passengers'] ?? [] as $pp) { $flx['pax'][] = ['n' => $pp['firstName'].' '.$pp['lastName'], 't' => $pp['passengerType']]; }
+@endphp
+<script>window.FL_X = {!! json_encode($flx, JSON_HEX_TAG | JSON_UNESCAPED_UNICODE) !!};</script>
+<script src="{{ asset('js/seatmap.js') }}?v={{ filemtime(public_path('js/seatmap.js')) }}"></script>
+@endif
 @if($pay)
 <script src="https://payment-wrapper.liteapi.travel/dist/liteAPIPayment.js?v=a1"></script>
 <script>

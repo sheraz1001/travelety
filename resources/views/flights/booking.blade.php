@@ -21,7 +21,7 @@
         <h2>Itinerary</h2>
         @foreach($legs as $l)
           <div class="sum-leg big">
-            <p class="note">{{ $l['dir']==='INBOUND' ? 'Return' : 'Outbound' }} · {{ \Carbon\Carbon::parse($l['dep'])->format('l j F Y') }} · {{ $hm($l['min']) }}</p>
+            <p class="note">{{ $l['dir']==='INBOUND' ? 'Return' : (str_starts_with($l['dir'],'LEG') ? 'Flight '.substr($l['dir'],3) : 'Outbound') }} · {{ \Carbon\Carbon::parse($l['dep'])->format('l j F Y') }} · {{ $hm($l['min']) }}</p>
             @foreach($l['segments'] as $k => $s)
               <div class="sl-row">@if(!empty($s['logo']))<img src="{{ $s['logo'] }}" alt="">@endif
                 <div><b>{{ substr($s['dep'],11,5) }} {{ $s['fromName'] }} ({{ $s['from'] }})</b><span class="note">{{ $s['airline'] }} {{ $s['flight'] }} · {{ $hm($s['min']) }}</span><b>{{ substr($s['arr'],11,5) }} {{ $s['toName'] }} ({{ $s['to'] }})</b></div></div>
@@ -37,6 +37,7 @@
           @if(!empty($f['booking_id']))<dt>Booking ID</dt><dd>{{ $f['booking_id'] }}</dd>@endif
           <dt>Passengers</dt><dd>@foreach($d['passengers'] ?? [] as $p){{ $p['title'] }} {{ $p['firstName'] }} {{ $p['lastName'] }}<br>@endforeach</dd>
           <dt>Fare</dt><dd>{{ $off['family'] ?? '' }} · {{ !empty($off['checked']) ? $off['checked']['pieces'].' checked bag' : 'no checked bag' }} · {{ !empty($off['refundable']) ? 'refundable' : 'non-refundable' }}</dd>
+          @if(!empty($d['extras']))<dt>Extras</dt><dd>@foreach($d['extras'] as $x){{ $d['passengers'][$x['pax']]['firstName'] ?? '' }}: {{ $x['label'] }}<br>@endforeach</dd>@endif
           <dt>Total paid</dt><dd><b>{{ $o->money() }}</b></dd>
         </dl>
       </div>

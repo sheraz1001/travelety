@@ -15,6 +15,7 @@ Route::controller(\App\Http\Controllers\FlightBookingController::class)->group(f
     Route::post('/flights/select', 'select')->middleware('throttle:30,1')->name('flights.select');
     Route::get('/flights/checkout/{order}', 'checkout')->name('flights.checkout');
     Route::post('/flights/checkout/{order}', 'passengers')->middleware('throttle:15,1')->name('flights.passengers');
+    Route::post('/flights/checkout/{order}/extras', 'extras')->middleware('throttle:20,1')->name('flights.extras');
     Route::get('/flights/checkout/{order}/complete', 'complete')->name('flights.complete');
     Route::get('/flights/booking/{order}', 'booking')->name('flights.booking');
     Route::get('/flights/booking/{order}/status', 'status')->middleware('throttle:30,1')->name('flights.status');

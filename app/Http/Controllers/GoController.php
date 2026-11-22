@@ -23,7 +23,7 @@ class GoController extends Controller
             return redirect()->route('flights.search', array_filter([
                 'from' => $from, 'to' => $to, 'depart' => $depart, 'return' => $return ?: null,
                 'adults' => $r->query('adults'), 'children' => $r->query('children') ?: null, 'infants' => $r->query('infants') ?: null,
-                'cabin' => (int) $r->query('cabin', 0) === 1 ? 'BUSINESS' : null,
+                'cabin' => ['1' => 'BUSINESS', '2' => 'FIRST', '3' => 'PREMIUM_ECONOMY'][(string) $r->query('cabin', '0')] ?? null,
             ]));
         }
 
