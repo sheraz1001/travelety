@@ -22,7 +22,12 @@
 <meta property="og:type" content="@yield('og_type', 'website')">
 @hasSection('og_image')<meta property="og:image" content="@yield('og_image')">@endif
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+<link rel="icon" href="{{ asset('favicon.ico') }}?v=3" sizes="48x48">
+<link rel="icon" href="{{ asset('favicon.svg') }}?v=3" type="image/svg+xml">
+<link rel="icon" href="{{ asset('favicon-32.png') }}?v=3" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}?v=3">
+<link rel="manifest" href="{{ asset('site.webmanifest') }}">
+<meta name="theme-color" content="#1463ff">
 <link rel="alternate" type="application/rss+xml" title="{{ $site }} blog" href="{{ route('blog.feed') }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -137,7 +142,7 @@
         <a href="{{ route('page', 'terms') }}">Terms of use</a>
       </div>
     </div>
-    <p class="disclosure">{{ $site }} is a travel search engine. We don't sell tickets or charge booking fees. Bookings are made directly with our airline, hotel and travel partners, who are responsible for fulfilment, payments and customer service. We may earn a commission on bookings at no extra cost to you. Prices shown on our pages are recent fares found by travellers and can change at any time.</p>
+    <p class="disclosure">@if(app(\App\Services\LiteApi::class)->enabled()){{ $site }} lets you search and book flights and hotels on our secure checkout; airlines and hotels confirm and fulfil each booking. For eSIMs, transfers, car rental and tours we link to trusted partners, who take payment and handle customer service, and we may earn a commission. Fares shown on route pages are recent prices found by travellers and can change at any time.@else{{ $site }} is a travel search engine. We don't sell tickets or charge booking fees. Bookings are made directly with our airline, hotel and travel partners, who are responsible for fulfilment, payments and customer service. We may earn a commission on bookings at no extra cost to you. Prices shown on our pages are recent fares found by travellers and can change at any time.@endif</p>
     <div class="legal"><span>© {{ date('Y') }} {{ $site }}. All rights reserved.</span><span>English · USD · Worldwide</span></div>
   </div>
 </footer>

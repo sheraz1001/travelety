@@ -232,3 +232,14 @@
   function filter(){var v=q.value.trim().toLowerCase();pop.querySelectorAll('.curgrid a').forEach(function(a){a.hidden=v&&a.dataset.s.indexOf(v)<0})}
   q.addEventListener('input',filter);
 })();
+
+/* Landing pages: cabin cards pick the cabin and jump to the search box */
+document.querySelectorAll('.sv-cabins [data-cabin]').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var s = document.getElementById('search');
+    if (!s) return;
+    s.querySelectorAll('select[name="cabin"]').forEach(function (sel) { sel.value = b.dataset.cabin; sel.dispatchEvent(new Event('change', { bubbles: true })); });
+    s.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(function () { var to = s.querySelector('.flight-form [data-ac="to"] input'); to && !to.value && to.focus({ preventScroll: true }); }, 450);
+  });
+});

@@ -36,6 +36,16 @@ class Destination extends Model
         return FlightRoute::published()->where('destination_iata', $this->iata)->orderBy('priority')->get();
     }
 
+    public const PHOTOS = ['istanbul' => 'istanbul', 'tokyo' => 'tokyo', 'paris' => 'paris', 'bali' => 'bali', 'london' => 'london', 'bangkok' => 'bangkok', 'sydney' => 'sydney', 'new-york' => 'newyork', 'rome' => 'rome', 'dubai' => 'dubai', 'singapore' => 'singapore', 'cape-town' => 'capetown', 'male' => 'maldives', 'maldives' => 'maldives', 'santorini' => 'santorini'];
+
+    /** Hero photo for the destination (bundled images, generic fallback). */
+    public function photo(): string
+    {
+        $f = self::PHOTOS[$this->slug] ?? ['mountains', 'beach', 'road', 'santorini', 'wing'][$this->id % 5];
+
+        return asset('img/home/'.$f.'.jpg');
+    }
+
     public function hotelsUrl(): string
     {
         return route('hotels.show', $this->slug);

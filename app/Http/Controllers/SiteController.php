@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Destination;
 use App\Models\FlightRoute;
 use App\Models\Post;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
 
 class SiteController extends Controller
@@ -35,8 +36,10 @@ class SiteController extends Controller
         $posts = Post::live()->with('category')->latest('published_at')->limit(3)->get();
 
         $faqs = [
-            ['q' => 'Do I book with '.\App\Models\Setting::get('site_name').'?', 'a' => 'We are a travel search and comparison site. Once you find a deal, you complete your booking directly with the airline, hotel or travel agency you chose. They issue your ticket, take your payment and handle any changes.'],
-            ['q' => 'Do you charge any fees?', 'a' => 'No. Searching and comparing is completely free, and we never add anything to the price. We may earn a small commission from our partners when you book, at no extra cost to you.'],
+            ['q' => 'Do I book with '.Setting::get('site_name').'?', 'a' => app(\App\Services\LiteApi::class)->enabled()
+                ? 'Yes for flights and hotels: you search, choose and pay on our secure checkout, and the airline or hotel confirms your booking. For eSIMs, transfers, car rental and tours we send you to a trusted partner to complete the booking.'
+                : 'We are a travel search and comparison site. Once you find a deal, you complete your booking directly with the airline, hotel or travel agency you chose. They issue your ticket, take your payment and handle any changes.'],
+            ['q' => 'Do you charge any fees?', 'a' => 'Searching is free. The price shown is the total you pay, with no extra booking fee added at checkout.'],
             ['q' => 'Why did the price change when I clicked through?', 'a' => 'Fares update constantly and seats at a given price can sell out. We show the most recent prices available, but the final price is always confirmed on the provider\'s page before you pay.'],
             ['q' => 'Who do I contact about my booking?', 'a' => 'Your booking confirmation comes from the company you booked with. Contact them for changes, cancellations, refunds or baggage questions, using the details in your confirmation email.'],
             ['q' => 'Can I find cheap Umrah flights here?', 'a' => 'Yes. Search for flights to Jeddah (JED) or Madinah (MED) from your city. Fares for Ramadan and school holidays rise early, so book ahead or set a price alert.'],
@@ -47,11 +50,29 @@ class SiteController extends Controller
 
     public function flights()
     {
-        $origins = Airport::where('is_origin', true)->where('country_code', 'AE')->orderBy('priority')->get();
-        $byCountry = FlightRoute::published()->orderBy('priority')->get()
-            ->groupBy(fn ($r) => $r->destination()?->country ?? 'Other')->sortKeys();
+        $origins = Airport::where('is_origin', true)->orderBy('priority')->get();
+        $routes = FlightRoute::published()->orderBy('priority')->get();
+        $byCountry = $routes->groupBy(fn ($r) => $r->destination()?->country ?? 'Other')->sortKeys();
+        $from = strtoupper((string) Setting::get('default_origin', 'DXB'));
+        $fromCity = Airport::byCode($from)?->city ?? $from;
+        $prices = $routes->where('origin_iata', $from)->filter(fn ($r) => $r->min_price)->keyBy('destination_iata');
 
-        return view('flights.index', compact('origins', 'byCountry'));
+        $order = ['IST', 'LHR', 'CDG', 'BKK', 'DPS', 'NRT', 'MLE', 'JFK', 'SIN', 'FCO', 'SYD', 'CPT'];
+        $popular = Destination::whereIn('iata', array_diff($order, [$from]))->get()
+            ->sortBy(fn ($d) => array_search($d->iata, $order))->values()->take(8);
+        $inSite = app(\App\Services\LiteApi::class)->enabled() && Setting::get('flight_engine') !== 'whitelabel';
+        $site = Setting::get('site_name');
+
+        $faqs = array_values(array_filter([
+            $inSite ? ['q' => "Can I book my flight on {$site}?", 'a' => "Yes. Search, pick a fare and pay on {$site}'s secure checkout. Your ticket is issued by the airline and you get a confirmation email with your booking reference and the airline reference (PNR)."] : null,
+            $inSite ? ['q' => 'Can I choose my seat and add bags?', 'a' => 'When the airline offers it, you can pick seats from a seat map, add checked bags and choose meals for each passenger after entering passenger details. Each extra shows its price before you pay.'] : null,
+            $inSite ? ['q' => 'Can I book a multi-city trip?', 'a' => 'Yes. Choose Multi-city in the search box and add up to five flights, for example Dubai to London, London to Paris and Paris back to Dubai.'] : null,
+            ['q' => 'When is the cheapest time to book?', 'a' => 'For most international routes, booking 6 to 10 weeks ahead gives the best fares. Peak periods such as school holidays, Eid and Christmas fill early, so book those sooner.'],
+            ['q' => 'Why did the price change?', 'a' => 'Airlines change fares constantly and seats at a given price can sell out. The final price is confirmed before you pay.'],
+            ['q' => 'What baggage is included?', 'a' => 'It depends on the airline and fare. Each result shows whether cabin and checked bags are included, and you can filter for fares with checked baggage.'],
+        ]));
+
+        return view('flights.index', compact('origins', 'byCountry', 'routes', 'from', 'fromCity', 'prices', 'popular', 'inSite', 'faqs'));
     }
 
     public function route(string $slug)
@@ -97,8 +118,20 @@ class SiteController extends Controller
     public function hotels()
     {
         $destinations = Destination::published()->whereNotNull('hotels_content')->orderByDesc('is_featured')->orderBy('city')->get();
+        $order = ['DXB', 'LHR', 'CDG', 'IST', 'DPS', 'MLE', 'NRT', 'BKK', 'SIN', 'FCO', 'JFK', 'JTR'];
+        $popular = Destination::whereIn('iata', $order)->get()->sortBy(fn ($d) => array_search($d->iata, $order))->values()->take(8);
+        $inSite = app(\App\Services\LiteApi::class)->enabled();
+        $site = Setting::get('site_name');
 
-        return view('hotels.index', compact('destinations'));
+        $faqs = array_values(array_filter([
+            $inSite ? ['q' => "Do I book the hotel on {$site}?", 'a' => "Yes. Choose a room and pay on {$site}'s secure checkout. You receive a confirmation email with your booking reference straight away, and the hotel receives your reservation."] : null,
+            $inSite ? ['q' => 'Can I cancel my booking?', 'a' => 'It depends on the rate. Each room shows whether it has free cancellation and until when. Non-refundable rates are usually cheaper but cannot be refunded.'] : null,
+            $inSite ? ['q' => 'Which currency will I pay in?', 'a' => 'Prices are shown in the currency you pick at the top of the page, and the amount at checkout matches the price you see.'] : null,
+            ['q' => 'Are taxes included in the price?', 'a' => 'The price shown includes the taxes collected at booking. Some cities also charge a local tourism fee that you pay at the hotel, so check the room details before you book.'],
+            ['q' => 'When should I book a hotel?', 'a' => 'For busy cities and holiday periods, book four to eight weeks ahead. Free-cancellation rates let you lock in a room early and still change your plans.'],
+        ]));
+
+        return view('hotels.index', compact('destinations', 'popular', 'inSite', 'faqs'));
     }
 
     public function hotel(string $slug)

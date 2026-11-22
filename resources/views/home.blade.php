@@ -137,9 +137,9 @@
   <section class="blk rv">
     <div class="why2">
       <div><span class="ic">{!! $I('search') !!}</span><h4>Compare in one search</h4><p>Fares and room rates from many airlines and booking sites side by side.</p></div>
-      <div><span class="ic">{!! $I('wallet') !!}</span><h4>No hidden markup</h4><p>The price you see is the provider's price. We don't add booking fees.</p></div>
+      <div><span class="ic">{!! $I('wallet') !!}</span><h4>No surprise fees</h4><p>The price you see is the price you pay, in the currency you choose.</p></div>
       <div><span class="ic">{!! $I('bell') !!}</span><h4>Fare alerts</h4><p>Pick a route and get an email when the price drops.</p></div>
-      <div><span class="ic">{!! $I('shield') !!}</span><h4>Book with trusted partners</h4><p>You pay the airline, hotel or provider directly, on their secure checkout.</p></div>
+      <div><span class="ic">{!! $I('shield') !!}</span><h4>Secure booking</h4><p>Book flights and hotels on our secure checkout, with instant email confirmation.</p></div>
     </div>
   </section>
 
