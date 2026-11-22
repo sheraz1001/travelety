@@ -49,10 +49,22 @@
 @endphp
 <div class="util">
   <div class="wrap">
-    <a href="{{ route('esim.index') }}" class="hide-m">{!! $I('sim') !!}Travel eSIM from $4</a>
+    <a href="{{ route('esim.index') }}" class="hide-m">{!! $I('sim') !!}Travel eSIM from {{ \App\Services\Currency::show(4, 'USD') }}</a>
     <a href="{{ route('blog.index') }}" class="hide-m">{!! $I('tag') !!}Deals &amp; guides</a>
     <span class="sp"></span>
-    <span class="util-pill">{!! $I('globe') !!}English · USD</span>
+    @php $curNow = \App\Services\Currency::current(); @endphp
+    <div class="curpick" id="curPick">
+      <button type="button" class="util-pill" aria-haspopup="true" aria-expanded="false">{!! $I('globe') !!}English · <b>{{ $curNow }}</b></button>
+      <div class="curpop" hidden>
+        <div class="curpop-h"><b>Choose your currency</b><input type="search" placeholder="Search currency" aria-label="Search currency"></div>
+        <div class="curgrid">
+          @foreach(\App\Services\Currency::LIST as $code => [$cname, $sym])
+            <a href="{{ route('currency.set', $code) }}" rel="nofollow" class="{{ $code === $curNow ? 'on' : '' }}" data-s="{{ strtolower($code.' '.$cname) }}"><b>{{ $code }}</b><span>{{ $cname }}</span></a>
+          @endforeach
+        </div>
+        <p class="note">Hotel and flight prices are quoted live in this currency. Other prices are converted at today's rate.</p>
+      </div>
+    </div>
     <a href="{{ route('page', 'contact') }}" class="hide-m">{!! $I('help') !!}Customer support</a>
     <a href="{{ route('home') }}#alerts">{!! $I('bell') !!}Price alerts</a>
   </div>

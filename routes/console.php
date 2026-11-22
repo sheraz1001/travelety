@@ -16,3 +16,5 @@ Schedule::call(function () {
     \App\Models\Order::where('type', 'flight')->where('status', 'processing')->where('updated_at', '>', now()->subDays(3))
         ->limit(30)->get()->each(fn ($o) => $c->refresh($o));
 })->everyFiveMinutes()->name('flights-sync')->withoutOverlapping();
+
+Schedule::call(fn () => \App\Services\Currency::refresh())->twiceDaily(1, 13)->name('fx-refresh');

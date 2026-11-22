@@ -48,7 +48,7 @@ class FlightBookingController extends Controller
         if (! preg_match('/^[A-Z]{2}$/', $country) || in_array($country, ['XX', 'T1'])) {
             $country = 'AE';
         }
-        $cur = strtoupper((string) ($r->query('currency') ?: Setting::get('hotel_currency') ?: 'USD'));
+        $cur = strtoupper((string) ($r->query('currency') ?: \App\Services\Currency::current()));
 
         // Multi-city: legs[i][from|to|date]
         $mc = [];

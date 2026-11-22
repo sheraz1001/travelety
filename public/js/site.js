@@ -221,3 +221,14 @@
     if(ci&&co) ci.addEventListener('change',function(){ var d=new Date(ci.value); if(isNaN(d))return; d.setDate(d.getDate()+1); var n=d.toISOString().slice(0,10); co.min=n; if(!co.value||co.value<=ci.value) co.value=n; });
   });
 })();
+
+/* Currency picker */
+(function(){
+  var w=document.getElementById('curPick'); if(!w)return;
+  var btn=w.querySelector('button'), pop=w.querySelector('.curpop'), q=pop.querySelector('input');
+  btn.addEventListener('click',function(e){e.stopPropagation();pop.hidden=!pop.hidden;btn.setAttribute('aria-expanded',String(!pop.hidden));if(!pop.hidden){q.value='';filter();setTimeout(function(){q.focus()},30)}});
+  document.addEventListener('click',function(e){if(!w.contains(e.target))pop.hidden=true});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')pop.hidden=true});
+  function filter(){var v=q.value.trim().toLowerCase();pop.querySelectorAll('.curgrid a').forEach(function(a){a.hidden=v&&a.dataset.s.indexOf(v)<0})}
+  q.addEventListener('input',filter);
+})();

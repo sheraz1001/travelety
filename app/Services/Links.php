@@ -16,7 +16,7 @@ class Links
             'origin_iata' => strtoupper($from), 'destination_iata' => strtoupper($to),
             'depart_date' => $depart, 'return_date' => $return, 'adults' => $adults,
             'children' => $children, 'infants' => $infants, 'trip_class' => $cabin,
-            'currency' => Setting::get('currency'), 'locale' => Setting::get('locale'), 'with_request' => 'true',
+            'currency' => strtolower(Currency::current()), 'locale' => Setting::get('locale'), 'with_request' => 'true',
         ]);
     }
 
@@ -47,13 +47,13 @@ class Links
             'destination' => $city,
             'checkIn' => $in ?? now()->addDays(14)->toDateString(),
             'checkOut' => $out ?? now()->addDays(17)->toDateString(),
-            'adults' => $adults, 'currency' => Setting::get('currency'), 'locale' => Setting::get('locale'),
+            'adults' => $adults, 'currency' => strtolower(Currency::current()), 'locale' => Setting::get('locale'),
         ]);
     }
 
     public static function money(?int $amount): string
     {
-        return $amount ? strtoupper(Setting::get('currency', 'aed')).' '.number_format($amount) : '—';
+        return $amount ? Currency::show((float) $amount, Currency::base(), 0) : '—';
     }
 
     public static function duration(?int $minutes): ?string

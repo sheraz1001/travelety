@@ -14,7 +14,7 @@
     <div class="hero-trust">
       <span>@include('partials.icon',['n'=>'check','sw'=>2.2])No roaming bills</span>
       <span>@include('partials.icon',['n'=>'check','sw'=>2.2])Keep your home number for WhatsApp &amp; 2FA</span>
-      <span>@include('partials.icon',['n'=>'check','sw'=>2.2])Plans from US${{ number_format($cheapest ?? 4.5, 2) }}</span>
+      <span>@include('partials.icon',['n'=>'check','sw'=>2.2])Plans from {{ \App\Services\Currency::show($cheapest ?? 4.5, 'USD') }}</span>
     </div>
   </div>
 </section>
@@ -29,7 +29,7 @@
         <a class="esim-dest" href="{{ route('esim.show', $d->slug) }}">
           <b>{{ $d->name }}</b>
           <span>{{ $d->plans }} plans{{ $d->unlimited ? ' · unlimited available' : '' }}</span>
-          <em>from US${{ number_format($d->from_usd, 2) }} <small>≈ AED {{ number_format($d->from_usd * \App\Models\EsimPlan::USD_TO_AED) }}</small></em>
+          <em>from {{ \App\Services\Currency::show($d->from_usd, 'USD') }}</em>
         </a>
       @endforeach
     </div>
@@ -44,7 +44,7 @@
         <a class="esim-dest" href="{{ route('esim.show', $d->slug) }}">
           <b>{{ $d->name }}</b>
           <span>{{ $d->group_type === 'global' ? 'Works worldwide' : 'Multi-country' }} · {{ $d->plans }} plans</span>
-          <em>from US${{ number_format($d->from_usd, 2) }}</em>
+          <em>from {{ \App\Services\Currency::show($d->from_usd, 'USD') }}</em>
         </a>
       @endforeach
     </div>
@@ -58,7 +58,7 @@
       <h3 style="font-family:Inter;font-size:20px;letter-spacing:0;margin:30px 0 14px">{{ $region }}</h3>
       <div class="chips">
         @foreach($items as $d)
-          <a class="chip esim-chip" data-name="{{ strtolower($d->name) }}" href="{{ route('esim.show', $d->slug) }}">{{ $d->name }} <b>US${{ number_format($d->from_usd, 2) }}</b></a>
+          <a class="chip esim-chip" data-name="{{ strtolower($d->name) }}" href="{{ route('esim.show', $d->slug) }}">{{ $d->name }} <b>{{ \App\Services\Currency::show($d->from_usd, 'USD') }}</b></a>
         @endforeach
       </div>
     @endforeach

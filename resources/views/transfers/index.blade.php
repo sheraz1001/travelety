@@ -42,7 +42,7 @@
           <div class="plan">
             <div class="plan-top"><div><b class="plan-data" style="font-size:22px">{{ $p['label'] }}</b>@if($p['seats'])<span class="plan-days">Up to {{ $p['seats'] }} passengers</span>@endif</div>@if($loop->first)<span class="badge">Lowest price</span>@endif</div>
             <div class="plan-meta"><span>Meet &amp; greet</span><span>Fixed price</span><span>Free waiting</span></div>
-            <div class="plan-bottom"><div><b class="plan-price">US${{ number_format($p['price'], 2) }}</b><small>≈ AED {{ number_format($p['price'] * 3.6725) }}</small></div>
+            <div class="plan-bottom"><div><b class="plan-price">{{ \App\Services\Currency::show($p['price'], 'USD') }}</b>@if(\App\Services\Currency::current() !== 'USD')<small>US${{ number_format($p['price'], 2) }} at checkout</small>@endif</div>
               <a class="btn" rel="nofollow sponsored" href="{{ route('transfers.book', ['airport' => $airport->iata, 'vehicle' => $p['type']]) }}">Book</a></div>
           </div>
         @endforeach

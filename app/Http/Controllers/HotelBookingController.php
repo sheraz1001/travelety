@@ -45,7 +45,7 @@ class HotelBookingController extends Controller
         if (! preg_match('/^[A-Z]{2}$/', $nat) || in_array($nat, ['XX', 'T1'])) {
             $nat = 'US';
         }
-        $cur = strtoupper((string) ($r->query('currency') ?: Setting::get('hotel_currency') ?: 'USD'));
+        $cur = strtoupper((string) ($r->query('currency') ?: \App\Services\Currency::current()));
         if (! preg_match('/^[A-Z]{3}$/', $cur)) {
             $cur = 'USD';
         }

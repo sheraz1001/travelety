@@ -990,3 +990,20 @@ body.noscroll{overflow:hidden}
 /* filter sidebars: full height, scroll with the page (no inner scrollbar) */
 .hs-side{position:static;max-height:none;overflow:visible;align-self:start}
 .fchk em{white-space:nowrap;padding-left:6px}
+/* currency picker */
+.curpick{position:relative}
+.curpick .util-pill{background:#fff;cursor:pointer;font:600 12.5px "Plus Jakarta Sans",sans-serif;color:var(--ink-2)}
+.curpick .util-pill b{color:var(--blue);margin-left:2px}
+.curpop{position:absolute;right:0;top:calc(100% + 8px);width:min(560px,92vw);background:#fff;border-radius:14px;box-shadow:var(--shadow);border:1px solid var(--line);padding:14px;z-index:300}
+.curpop[hidden]{display:none}
+.curpop-h{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.curpop-h b{font-size:15px;color:var(--ink)}
+.curpop-h input{border:1.5px solid var(--line);border-radius:9px;padding:7px 10px;font:500 13px "Plus Jakarta Sans",sans-serif;width:180px;outline:0}
+.curgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-height:340px;overflow:auto}
+.curgrid a{display:flex;flex-direction:column;padding:8px 10px;border-radius:9px;font-size:12px;color:var(--muted);border:1.5px solid transparent}
+.curgrid a b{color:var(--ink);font-size:13.5px}
+.curgrid a:hover{background:var(--blue-50)}
+.curgrid a.on{border-color:var(--blue);background:var(--blue-50)}
+.curgrid a[hidden]{display:none}
+.curpop .note{font-size:11.5px;margin-top:10px}
+@media (max-width:720px){.curgrid{grid-template-columns:repeat(2,1fr)}.curpop{position:fixed;left:4vw;right:4vw;top:44px;width:auto}}

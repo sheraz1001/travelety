@@ -8,7 +8,8 @@
   var st = { name: '', min: null, max: null, refundable: false, meal: [], stars: [], score: 0, dist: 0, sort: 'rec' };
   var $ = function (s, el) { return (el || document).querySelector(s); }, $$ = function (s, el) { return [].slice.call((el || document).querySelectorAll(s)); };
   var list = $('#hsList'), more = $('#hsMore'), count = $('#hsCount');
-  var cur = '', fmt = function (n, d) { return cur + ' ' + Number(n).toLocaleString('en-US', { minimumFractionDigits: d === 0 ? 0 : 2, maximumFractionDigits: d === 0 ? 0 : 2 }); };
+  var NODEC = ['JPY','KRW','IDR','VND','HUF','PKR','LKR','NPR','BDT','NGN','KES','UZS','KZT','INR','PHP'];
+  var cur = '', fmt = function (n, d) { if (NODEC.indexOf(cur) >= 0 || n >= 10000) d = 0; return cur + ' ' + Number(n).toLocaleString('en-US', { minimumFractionDigits: d === 0 ? 0 : 2, maximumFractionDigits: d === 0 ? 0 : 2 }); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var word = function (r) { return r >= 9 ? 'Wonderful' : r >= 8 ? 'Very good' : r >= 7 ? 'Good' : r >= 6 ? 'Pleasant' : 'Review score'; };
   var MEAL = { bb: 'Breakfast included', hb: 'Half board', fb: 'Full board', ai: 'All inclusive', ro: 'Room only' };

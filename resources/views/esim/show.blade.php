@@ -18,14 +18,14 @@
   <div class="wrap">
     @include('partials.crumbs', ['items' => ['eSIM' => route('esim.index'), $name => null]])
     <h1>eSIM for {{ $name }}</h1>
-    <p class="lead">{{ $plans->count() }} data plans from <b>US${{ number_format($min, 2) }}</b> (≈ AED {{ number_format($min * \App\Models\EsimPlan::USD_TO_AED) }}).{{ $isMulti ? ' One eSIM for every country on your trip.' : ' Install before you fly and get online the moment you land in '.$name.'.' }}</p>
+    <p class="lead">{{ $plans->count() }} data plans from <b>{{ \App\Services\Currency::show($min, 'USD') }}</b>.{{ $isMulti ? ' One eSIM for every country on your trip.' : ' Install before you fly and get online the moment you land in '.$name.'.' }}</p>
   </div>
 </section>
 
 <div class="wrap">
   <div class="facts">
-    <div class="fact"><small>From</small><b>US${{ number_format($min, 2) }}</b><span>≈ AED {{ number_format($min * \App\Models\EsimPlan::USD_TO_AED) }}</span></div>
-    <div class="fact"><small>Best value</small><b>{{ $bestValue ? 'US$'.number_format($bestValue->pricePerGb(), 2).'/GB' : '—' }}</b><span>{{ $bestValue ? $bestValue->data_label.' · '.$bestValue->days.' days' : 'Compare plans below' }}</span></div>
+    <div class="fact"><small>From</small><b>{{ \App\Services\Currency::show($min, 'USD') }}</b><span>{{ \App\Services\Currency::current() !== 'USD' ? 'US$'.number_format($min, 2).' at checkout' : 'Prepaid, no contract' }}</span></div>
+    <div class="fact"><small>Best value</small><b>{{ $bestValue ? \App\Services\Currency::show($bestValue->pricePerGb(), 'USD').'/GB' : '—' }}</b><span>{{ $bestValue ? $bestValue->data_label.' · '.$bestValue->days.' days' : 'Compare plans below' }}</span></div>
     <div class="fact"><small>Network</small><b style="font-size:16px;line-height:1.3">{{ \Illuminate\Support\Str::limit($info['networks'] ?? 'Local partner networks', 40) }}</b><span>{{ str_contains((string) $info['networks'], '5G') ? '5G where available' : '4G/LTE' }}</span></div>
     <div class="fact"><small>Top-ups</small><b>{{ $info['top_ups'] ? 'Available' : 'Check plan' }}</b><span>{{ $info['voice'] ? 'Data + calls plans too' : 'Data-only plans' }}</span></div>
   </div>
@@ -54,17 +54,17 @@
             <div class="plan-meta">
               @if($p->operator)<span>{{ $p->operator }}</span>@endif
               @if(str_contains($p->plan_type, 'voice'))<span>Calls &amp; SMS</span>@endif
-              @if($p->pricePerGb())<span>US${{ number_format($p->pricePerGb(), 2) }}/GB</span>@endif
+              @if($p->pricePerGb())<span>{{ \App\Services\Currency::show($p->pricePerGb(), 'USD') }}/GB</span>@endif
             </div>
             <div class="plan-bottom">
-              <div><b class="plan-price">US${{ number_format($p->price_usd, 2) }}</b><small>≈ {{ $p->priceAed() }}</small></div>
+              <div><b class="plan-price">{{ \App\Services\Currency::show($p->price_usd, 'USD') }}</b>@if(\App\Services\Currency::current() !== 'USD')<small>US${{ number_format($p->price_usd, 2) }} at checkout</small>@endif</div>
               <a class="btn" href="{{ route('esim.go', $p) }}" rel="nofollow sponsored">Get eSIM</a>
             </div>
           </div>
         @endforeach
       </div>
       <p class="note" id="noPlans" style="display:none">No plans match these filters.</p>
-      <p class="note" style="margin-top:14px">Prices in US dollars from our eSIM partner, updated daily. AED amounts are approximate. You complete your purchase with the partner, who delivers the eSIM and provides support.</p>
+      <p class="note" style="margin-top:14px">Prices from our eSIM partner in US dollars, updated daily. Amounts in other currencies are converted at today's rate and are approximate. You complete your purchase with the partner, who delivers the eSIM and provides support.</p>
 
       <div class="prose" style="margin-top:40px">
         @if($info['coverage'])<h2>Countries covered</h2><p>{{ $info['coverage'] }}</p>@endif
@@ -96,12 +96,12 @@
       @endif
       @if($regional->count())
       <div class="box"><h3>Visiting more countries?</h3>
-        @foreach($regional as $r)<a class="li" href="{{ route('esim.show', $r->slug) }}">{{ $r->name }} eSIM <span>from US${{ number_format($r->from_usd, 2) }}</span></a>@endforeach
+        @foreach($regional as $r)<a class="li" href="{{ route('esim.show', $r->slug) }}">{{ $r->name }} eSIM <span>from {{ \App\Services\Currency::show($r->from_usd, 'USD') }}</span></a>@endforeach
       </div>
       @endif
       @if($related->count())
       <div class="box"><h3>Nearby destinations</h3>
-        @foreach($related as $r)<a class="li" href="{{ route('esim.show', $r->slug) }}">{{ $r->name }} <span>US${{ number_format($r->from_usd, 2) }}</span></a>@endforeach
+        @foreach($related as $r)<a class="li" href="{{ route('esim.show', $r->slug) }}">{{ $r->name }} <span>{{ \App\Services\Currency::show($r->from_usd, 'USD') }}</span></a>@endforeach
       </div>
       @endif
     </aside>

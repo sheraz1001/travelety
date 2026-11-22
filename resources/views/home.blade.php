@@ -5,7 +5,7 @@
   $photo = ['istanbul'=>'istanbul','tokyo'=>'tokyo','paris'=>'paris','bali'=>'bali','london'=>'london','bangkok'=>'bangkok','sydney'=>'sydney','new-york'=>'newyork','rome'=>'rome','dubai'=>'dubai','singapore'=>'singapore','cape-town'=>'capetown','male'=>'maldives','maldives'=>'maldives','santorini'=>'santorini'];
   $fallback = ['mountains','beach','road','santorini','wing'];
   $cc = ['turkey'=>'TR','united-kingdom'=>'GB','united-states'=>'US','saudi-arabia'=>'SA','egypt'=>'EG','france'=>'FR','europe'=>'EU','asia'=>'AS','middle-east-and-north-africa'=>'ME','latin-america'=>'LA','africa'=>'AF','world'=>'GL','japan'=>'JP','thailand'=>'TH','indonesia'=>'ID','india'=>'IN','singapore'=>'SG','malaysia'=>'MY'];
-  $money = fn($v) => '$'.str_replace('.00', '', number_format((float)$v, 2));
+  $money = fn($v) => \App\Services\Currency::show((float) $v, 'USD');
 @endphp
 @section('content')
 <section class="ph-hero">
@@ -45,7 +45,7 @@
     <div class="promo">
       <button class="parr l" id="pl" aria-label="Previous">{!! $I('left',2.2) !!}</button>
       <div class="ptrack" id="ptrack">
-        <a class="pcard c1" href="{{ route('esim.index') }}"><img src="{{ $img('phone') }}" alt="" loading="lazy"><div><small>eSIM · {{ $esimCount }} destinations</small><h3>Land connected. Data plans from $4</h3><span class="cta">Find your eSIM {!! $I('arrow') !!}</span></div></a>
+        <a class="pcard c1" href="{{ route('esim.index') }}"><img src="{{ $img('phone') }}" alt="" loading="lazy"><div><small>eSIM · {{ $esimCount }} destinations</small><h3>Land connected. Data plans from {{ \App\Services\Currency::show(4, 'USD') }}</h3><span class="cta">Find your eSIM {!! $I('arrow') !!}</span></div></a>
         <a class="pcard c2" href="{{ route('transfers.index') }}"><img src="{{ $img('car') }}" alt="" loading="lazy"><div><small>Airport transfers</small><h3>Fixed price, driver waiting at arrivals</h3><span class="cta">See prices {!! $I('arrow') !!}</span></div></a>
         <a class="pcard c3" href="#alerts"><img src="{{ $img('wing') }}" alt="" loading="lazy"><div><small>Price alerts</small><h3>We'll email you when fares drop</h3><span class="cta">Create alert {!! $I('arrow') !!}</span></div></a>
         @if(\App\Services\Links::partner('cars'))<a class="pcard c4" href="{{ route('go.partner','cars') }}" rel="nofollow sponsored"><img src="{{ $img('road') }}" alt="" loading="lazy"><div><small>Car rental</small><h3>Compare cars from local and global brands</h3><span class="cta">Search cars {!! $I('arrow') !!}</span></div></a>@endif

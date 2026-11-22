@@ -25,6 +25,19 @@ Route::get('/flights-from/{city}', [SiteController::class, 'flightsFrom'])->name
 Route::get('/flights-to/{city}', [SiteController::class, 'flightsTo'])->name('flights.to');
 
 Route::get('/hotels', [SiteController::class, 'hotels'])->name('hotels.index');
+Route::get('/currency/{code}', function (string $code) {
+    $code = strtoupper($code);
+    abort_unless(\App\Services\Currency::valid($code), 404);
+    $back = url()->previous();
+    if (! str_starts_with($back, url('/')) || str_contains($back, '/currency/')) {
+        $back = url('/');
+    }
+    // drop an explicit ?currency= so the new choice applies
+    $back = preg_replace('/([?&])currency=[A-Za-z]{3}(&|$)/', '$1', $back);
+
+    return redirect(rtrim($back, '?&'))->withCookie(cookie(\App\Services\Currency::COOKIE, $code, 60 * 24 * 365))->header('Cache-Control', 'no-store');
+})->where('code', '[A-Za-z]{3}')->name('currency.set');
+
 Route::controller(\App\Http\Controllers\HotelBookingController::class)->group(function () {
     Route::get('/hotels/search', 'search')->name('hotels.search');
     Route::get('/hotels/search.json', 'searchData')->middleware('throttle:40,1')->name('hotels.search.data');

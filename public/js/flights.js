@@ -12,7 +12,8 @@
   var st = fresh();
   var ALLY = { 'Star Alliance': 'LH UA AC NH SQ TK LX OS SN TP LO OZ ET MS A3 CA BR TG AI NZ SA CM AV ZH OU', 'oneworld': 'AA BA QR CX JL QF IB AY MH RJ AS UL AT WY', 'SkyTeam': 'AF KL DL KE AM AR CI MU SV VN GA ME KQ RO SK VS UX' };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
-  var fmt = function (n, d) { return cur + ' ' + Number(n).toLocaleString('en-US', { minimumFractionDigits: d === 0 ? 0 : 2, maximumFractionDigits: d === 0 ? 0 : 2 }); };
+  var NODEC = ['JPY','KRW','IDR','VND','HUF','PKR','LKR','NPR','BDT','NGN','KES','UZS','KZT','INR','PHP'];
+  var fmt = function (n, d) { if (NODEC.indexOf(cur) >= 0 || n >= 10000) d = 0; return cur + ' ' + Number(n).toLocaleString('en-US', { minimumFractionDigits: d === 0 ? 0 : 2, maximumFractionDigits: d === 0 ? 0 : 2 }); };
   var hm = function (m) { if (m == null) return '–'; return Math.floor(m / 60) + 'h ' + (m % 60 ? (m % 60) + 'm' : ''); };
   var tm = function (iso) { return iso ? iso.substr(11, 5) : ''; };
   var dshort = function (iso) { var d = new Date(iso.substr(0, 10) + 'T00:00:00'); return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); };

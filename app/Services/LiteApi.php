@@ -110,7 +110,7 @@ class LiteApi
         $r = Cache::get($key);
         if (! $r) {
             $r = $this->call('POST', self::API.'/hotels/rates', $body, 30);
-            if ($r && ! isset($r['_error'])) {
+            if ($r && ! isset($r['_error']) && ! empty($r['data'])) {
                 Cache::put($key, $r, now()->addMinutes(10));
             }
         }
@@ -266,7 +266,7 @@ class LiteApi
         }
         $hash = substr(md5($this->mode().json_encode($body)), 0, 20);
         $cached = Cache::get('lite.fl.'.$hash);
-        if ($cached) {
+        if ($cached && ! empty($cached['journeys'])) {
             return ['hash' => $hash, 'journeys' => $cached['journeys'], 'error' => null];
         }
         $r = $this->call('POST', self::API.'/flights/rates', $body, 90);
