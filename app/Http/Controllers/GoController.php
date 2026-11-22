@@ -30,6 +30,9 @@ class GoController extends Controller
 
     public function hotels(Request $r)
     {
+        if (app(\App\Services\LiteApi::class)->enabled()) {
+            return redirect()->route('hotels.search', array_filter(['q' => $r->query('city'), 'checkin' => $r->query('checkin'), 'checkout' => $r->query('checkout'), 'adults' => $r->query('adults')]));
+        }
         if (! Links::hotelsEnabled()) {
             return redirect()->route('hotels.index');
         }

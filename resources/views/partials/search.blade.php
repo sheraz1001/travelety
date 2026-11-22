@@ -3,7 +3,7 @@
   $from = strtoupper($from ?? \App\Models\Setting::get('default_origin'));
   $to = strtoupper($to ?? '');
   $city = $city ?? '';
-  $show = array_values(array_filter($show ?? ['flights','hotels','transfers','tours','esim','cars'], fn($t) => $t === 'flights' || ($t === 'hotels' ? \App\Services\Links::hotelsEnabled() : \App\Services\Links::partner($t))));
+  $show = array_values(array_filter($show ?? ['flights','hotels','esim','transfers','tours','cars'], fn($t) => $t === 'flights' || ($t === 'hotels' ? \App\Services\Links::hotelsEnabled() : \App\Services\Links::partner($t))));
   $tab = in_array($tab, $show) ? $tab : 'flights';
   $labels = ['flights'=>['Flights','plane'],'hotels'=>['Hotels','hotel'],'transfers'=>['Transfers','car'],'tours'=>['Tours','compass'],'esim'=>['eSIM','sim'],'cars'=>['Car rental','key']];
   $fromA = \App\Models\Airport::byCode($from); $toA = $to ? \App\Models\Airport::byCode($to) : null;
@@ -57,6 +57,9 @@
 
   @if(in_array('hotels',$show))
   <div class="panel {{ $tab === 'hotels' ? 'active' : '' }}" data-name="hotels">
+    @if(app(\App\Services\LiteApi::class)->enabled())
+      @include('hotels.partials.form', ['p' => $hp ?? null])
+    @else
     <form class="fields hotels hotel-form" action="{{ route('go.hotels') }}" method="get" autocomplete="off">
       <div class="field"><label>Destination</label><input name="city" placeholder="City, area or hotel name" value="{{ $city }}" aria-label="Destination"><small>&nbsp;</small></div>
       <div class="field"><label>Check-in</label><input type="date" name="checkin" aria-label="Check-in"><small>&nbsp;</small></div>
@@ -64,6 +67,7 @@
       <div class="field"><label>Guests</label><select name="adults" aria-label="Guests">@for($i=1;$i<=6;$i++)<option value="{{ $i }}" @selected($i===2)>{{ $i }} guest{{ $i>1?'s':'' }}</option>@endfor</select><small>&nbsp;</small></div>
       <button class="btn" type="submit">Find hotels</button>
     </form>
+    @endif
   </div>
   @endif
 

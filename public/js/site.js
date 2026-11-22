@@ -127,3 +127,22 @@
   var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.08});
   els.forEach(function(e){io.observe(e)});
 })();
+
+/* Hotel destination autocomplete + date sync */
+(function(){
+  var forms=document.querySelectorAll('.hs-form');
+  forms.forEach(function(f){
+    var box=f.querySelector('[data-hac]'); if(!box)return;
+    var input=box.querySelector('input'), list=box.querySelector('.ac'), small=box.querySelector('small'), pid=f.querySelector('[name=placeId]'), t, items=[], hi=-1;
+    function render(){ list.innerHTML=items.map(function(p,i){return '<div class="'+(i===hi?'hi':'')+'" data-i="'+i+'"><b>'+esc(p.name)+'</b><span>'+esc(p.address||'')+'</span></div>'}).join(''); list.style.display=items.length?'block':'none'; }
+    function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+    function pick(i){ var p=items[i]; if(!p)return; input.value=p.name; pid.value=p.placeId||''; small.textContent=p.address||''; items=[]; render(); }
+    input.addEventListener('input',function(){ pid.value=''; clearTimeout(t); var q=input.value.trim(); if(q.length<2){items=[];render();return;}
+      t=setTimeout(function(){ fetch('/hotels/places?q='+encodeURIComponent(q)).then(function(r){return r.json()}).then(function(d){items=d||[];hi=-1;render()}).catch(function(){}); },300); });
+    input.addEventListener('keydown',function(e){ if(!items.length)return; if(e.key==='ArrowDown'){hi=Math.min(items.length-1,hi+1);render();e.preventDefault()} else if(e.key==='ArrowUp'){hi=Math.max(0,hi-1);render();e.preventDefault()} else if(e.key==='Enter'&&hi>=0){pick(hi);e.preventDefault()} });
+    list.addEventListener('mousedown',function(e){ var d=e.target.closest('[data-i]'); if(d){pick(+d.dataset.i);e.preventDefault()} });
+    input.addEventListener('blur',function(){ setTimeout(function(){items=[];render()},150) });
+    var ci=f.querySelector('[name=checkin]'), co=f.querySelector('[name=checkout]');
+    if(ci&&co) ci.addEventListener('change',function(){ var d=new Date(ci.value); if(isNaN(d))return; d.setDate(d.getDate()+1); var n=d.toISOString().slice(0,10); co.min=n; if(!co.value||co.value<=ci.value) co.value=n; });
+  });
+})();

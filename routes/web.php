@@ -14,6 +14,16 @@ Route::get('/flights-from/{city}', [SiteController::class, 'flightsFrom'])->name
 Route::get('/flights-to/{city}', [SiteController::class, 'flightsTo'])->name('flights.to');
 
 Route::get('/hotels', [SiteController::class, 'hotels'])->name('hotels.index');
+Route::controller(\App\Http\Controllers\HotelBookingController::class)->group(function () {
+    Route::get('/hotels/search', 'search')->name('hotels.search');
+    Route::get('/hotels/places', 'places')->middleware('throttle:60,1')->name('hotels.places');
+    Route::get('/hotels/stay/{hotelId}', 'show')->name('hotels.stay');
+    Route::post('/hotels/stay/{hotelId}/reserve', 'prebook')->middleware('throttle:20,1')->name('hotels.prebook');
+    Route::get('/hotels/checkout/{order}', 'checkout')->name('hotels.checkout');
+    Route::post('/hotels/checkout/{order}', 'guest')->middleware('throttle:20,1')->name('hotels.guest');
+    Route::get('/hotels/checkout/{order}/complete', 'complete')->name('hotels.complete');
+    Route::get('/hotels/booking/{order}', 'booking')->name('hotels.booking');
+});
 Route::get('/hotels/{slug}', [SiteController::class, 'hotel'])->name('hotels.show');
 
 Route::get('/travel', [SiteController::class, 'travel'])->name('travel.index');

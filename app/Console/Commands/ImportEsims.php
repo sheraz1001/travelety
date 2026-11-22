@@ -124,6 +124,7 @@ class ImportEsims extends Command
             'other_info' => $details['Other info'] ?? null,
             'top_ups' => isset($details['Available top-ups']) ? strtolower($details['Available top-ups']) === 'yes' : null,
             'link' => $link,
+            'package_id' => basename($path),
             'image' => trim((string) $x->image_link) ?: null,
             'is_active' => true,
         ];

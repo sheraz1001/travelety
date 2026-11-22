@@ -32,7 +32,7 @@ class Links
 
     public static function hotelsEnabled(): bool
     {
-        return (bool) Setting::get('link_hotels');
+        return (bool) Setting::get('link_hotels') || app(\App\Services\LiteApi::class)->enabled();
     }
 
     public static function hotels(?string $city = null, ?string $in = null, ?string $out = null, int $adults = 2): string

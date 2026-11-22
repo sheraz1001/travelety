@@ -70,6 +70,13 @@ class Settings extends Page implements HasSchemas
                 TextInput::make('tp_project_id')->label('Project ID (for eSIM links)'),
                 TextInput::make('link_gettransfer')->label('GetTransfer booking link')->url(),
             ]),
+            Section::make('Hotel booking (Nuitee / LiteAPI)')->description('Hotels are searched, booked and paid on travelety.com. Markup is set in the Nuitee dashboard → Commission.')->columns(2)->schema([
+                Select::make('liteapi_mode')->label('Mode')->options(['sandbox' => 'Sandbox (test bookings, no charges)', 'live' => 'Live (real bookings)'])
+                    ->helperText('Live only works once the production key is saved.'),
+                TextInput::make('hotel_currency')->label('Hotel price currency')->maxLength(3)->helperText('e.g. USD, AED, EUR'),
+                TextInput::make('liteapi_sandbox_key')->label('Sandbox API key (sand_…)')->password()->revealable(),
+                TextInput::make('liteapi_live_key')->label('Production API key (prod_…)')->password()->revealable(),
+            ]),
             Section::make('Content automation')->columns(4)->schema([
                 Toggle::make('blog_auto_publish')->label('Auto-publish posts that pass QC')->inline(false)->columnSpan(2),
                 TextInput::make('blog_posts_per_day')->numeric()->minValue(0)->maxValue(5),
