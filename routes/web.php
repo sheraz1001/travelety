@@ -9,6 +9,16 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [SiteController::class, 'home'])->name('home');
 
 Route::get('/flights', [SiteController::class, 'flights'])->name('flights.index');
+Route::controller(\App\Http\Controllers\FlightBookingController::class)->group(function () {
+    Route::get('/flights/search', 'search')->name('flights.search');
+    Route::get('/flights/search.json', 'searchData')->middleware('throttle:30,1')->name('flights.search.data');
+    Route::post('/flights/select', 'select')->middleware('throttle:30,1')->name('flights.select');
+    Route::get('/flights/checkout/{order}', 'checkout')->name('flights.checkout');
+    Route::post('/flights/checkout/{order}', 'passengers')->middleware('throttle:15,1')->name('flights.passengers');
+    Route::get('/flights/checkout/{order}/complete', 'complete')->name('flights.complete');
+    Route::get('/flights/booking/{order}', 'booking')->name('flights.booking');
+    Route::get('/flights/booking/{order}/status', 'status')->middleware('throttle:30,1')->name('flights.status');
+});
 Route::get('/flights/{slug}', [SiteController::class, 'route'])->name('flights.show');
 Route::get('/flights-from/{city}', [SiteController::class, 'flightsFrom'])->name('flights.from');
 Route::get('/flights-to/{city}', [SiteController::class, 'flightsTo'])->name('flights.to');

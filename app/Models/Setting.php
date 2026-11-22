@@ -35,6 +35,7 @@ class Setting extends Model
         'liteapi_sandbox_key' => '',
         'liteapi_live_key' => '',
         'liteapi_mode' => 'sandbox',
+        'flight_engine' => 'nuitee',
         'hotel_currency' => 'USD',
         'gettransfer_api_base' => 'https://gtrbox.org',
         'link_gettransfer' => 'https://gettransfer.tpk.lv/s35pgfLR',

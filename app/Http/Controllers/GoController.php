@@ -19,6 +19,14 @@ class GoController extends Controller
 
         $this->log('flights', "{$from}-{$to}", $r);
 
+        if ($to && \App\Models\Setting::get('flight_engine') !== 'whitelabel' && app(\App\Services\LiteApi::class)->enabled()) {
+            return redirect()->route('flights.search', array_filter([
+                'from' => $from, 'to' => $to, 'depart' => $depart, 'return' => $return ?: null,
+                'adults' => $r->query('adults'), 'children' => $r->query('children') ?: null, 'infants' => $r->query('infants') ?: null,
+                'cabin' => (int) $r->query('cabin', 0) === 1 ? 'BUSINESS' : null,
+            ]));
+        }
+
         return redirect()->away(Links::flights(
             $from, $to ?: $from, $depart, $return ?: null,
             max(1, min(9, (int) $r->query('adults', 1))),

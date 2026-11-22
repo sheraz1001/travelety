@@ -829,3 +829,100 @@ body.noscroll{overflow:hidden}
 .hd-map a{padding:0 8px 4px;display:block;color:var(--blue);font-weight:600}
 .minimap,.bigmap,#hotelMap,.hs-mapcard{isolation:isolate}
 @media (max-width:720px){.hs-tools{flex-wrap:wrap}.hs-sortsel{min-width:0;width:100%;flex:1 1 100%}.hs-tools .hs-mobile-filter{flex:1}}
+
+/* ===== Flight booking ===== */
+.hs-top .search{border-radius:14px}
+.fl-route{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.fl-route>div{display:flex;align-items:center;gap:8px;font-size:19px}
+.fl-route svg{width:18px;height:18px;color:var(--blue)}
+.fl-sorts{display:grid;grid-template-columns:repeat(3,1fr);background:#fff;border-radius:14px;box-shadow:var(--sh);overflow:hidden;margin-bottom:12px}
+.fl-sorts button{border:0;background:#fff;padding:12px 16px;text-align:left;cursor:pointer;border-bottom:3px solid transparent;font-family:inherit;border-right:1px solid var(--line)}
+.fl-sorts button:last-child{border-right:0}
+.fl-sorts button b{display:block;font-size:14.5px;color:var(--ink)}
+.fl-sorts button span{font-size:13px;color:var(--muted)}
+.fl-sorts button.on{border-bottom-color:var(--blue);background:var(--blue-50)}
+.fl-sorts button.on b{color:var(--blue)}
+.fl-progress{height:4px;background:var(--line);border-radius:4px;overflow:hidden;margin-bottom:12px}
+.fl-progress[hidden]{display:none}
+.fl-progress i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),#5b8cff);width:0;transition:width .3s}
+.range2.single input{pointer-events:auto}
+.range2.single input::-webkit-slider-thumb{pointer-events:auto}
+.alogo-s{width:20px;height:20px;object-fit:contain;border-radius:4px}
+.tslots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tslots button{border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:6px 2px;font-size:15px;cursor:pointer;font-family:inherit}
+.tslots button b{display:block;font-size:11px;color:var(--ink-2)}
+.tslots button.on{border-color:var(--blue);background:var(--blue-50)}
+#flList{display:grid;gap:12px}
+.fcard{background:#fff;border-radius:16px;box-shadow:var(--sh);border:1.5px solid transparent;transition:.2s}
+.fcard:hover{border-color:var(--blue-100)}
+.fcard.bestc{border-color:var(--blue)}
+.fcard.skel{height:150px;padding:20px;display:grid;gap:12px;background:#fff}
+.fcard.skel i{display:block;height:16px;border-radius:6px;background:linear-gradient(90deg,#eef1f6 25%,#f7f9fc 50%,#eef1f6 75%);background-size:200% 100%;animation:sk 1.2s infinite}
+.fcard.skel i.s{width:30%;margin-left:auto;height:30px}
+.fc-main{display:grid;grid-template-columns:minmax(0,1fr) 200px}
+.fc-legs{padding:16px 18px;display:grid;gap:12px}
+.leg{display:grid;grid-template-columns:46px 74px minmax(0,1fr) 74px 140px;align-items:center;gap:10px}
+.alogo{display:flex;gap:2px}
+.alogo img{width:34px;height:34px;object-fit:contain;border-radius:8px;background:#fff}
+.alogo img+img{width:20px;height:20px;margin-top:14px;margin-left:-10px}
+.lt b{display:block;font-size:19px;letter-spacing:-.4px}
+.lt b sup{font-size:11px;color:var(--orange);margin-left:2px}
+.lt span{font-size:12.5px;color:var(--muted)}
+.lt.r{text-align:right}
+.lmid{text-align:center}
+.lmid small{font-size:12px;color:var(--muted)}
+.lmid .line{height:2px;background:#c9d1e3;margin:5px 0;position:relative;display:flex;justify-content:center;gap:18px;align-items:center}
+.lmid .line i{width:7px;height:7px;border-radius:50%;background:#fff;border:2px solid var(--orange);margin-top:-1px}
+.lmid .dir{font-size:12px;color:#00875a;font-weight:700}
+.lmid .st{font-size:12px;color:var(--orange);font-weight:600}
+.lair{font-size:12.5px;color:var(--muted);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc-tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.t.o{background:#fff1ea;color:#c2410c}
+.fc-tags .linkbtn{margin-left:auto}
+.fc-price{border-left:1px dashed var(--line);padding:16px 18px;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:2px;text-align:right}
+.fc-price b{font-size:23px;letter-spacing:-.5px}
+.fc-price small{font-size:12px;color:var(--muted)}
+.fc-price .ff{color:var(--blue);font-weight:600}
+.fc-price .hbtn{margin-top:8px;width:100%}
+.fc-x{border-top:1px solid var(--line);padding:16px 18px;background:#fbfcfe;border-radius:0 0 16px 16px}
+.fx-h{font-size:15px;margin-bottom:10px}
+.fares2{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:16px}
+.fare{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.fare:hover{border-color:var(--blue)}
+.fare h5{font-size:15px;letter-spacing:-.2px}
+.fare ul{list-style:none;font-size:13px;display:grid;gap:3px}
+.fare li.g{color:#00875a}.fare li.r{color:#8a93a8}
+.fare .note{font-size:12px;min-height:16px}
+.fare-b{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fare-b b{font-size:18px}
+.fare-b .hbtn{height:38px;padding:0 14px}
+.fdet{display:grid;gap:14px}
+.fdl h5{font-size:13.5px;margin-bottom:8px}
+.seg{display:flex;gap:12px;padding:8px 0}
+.seg img{width:28px;height:28px;object-fit:contain}
+.seg p{font-size:13.5px;margin:1px 0}
+.lay{font-size:12.5px;color:#a15c00;background:#fff6e0;border-radius:8px;padding:6px 10px;margin:4px 0 4px 40px}
+/* checkout */
+.pax{border:1.5px solid var(--line);border-radius:14px;padding:16px 18px 18px;margin-top:16px}
+.pax legend{font-weight:800;font-size:14.5px;padding:0 6px}
+.co-row3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.co-card select{display:block;width:100%;margin-top:6px;border:1.5px solid var(--line);border-radius:10px;padding:12px 10px;font:500 15px "Plus Jakarta Sans",sans-serif;color:var(--ink);background:#fff;outline:0}
+.phone-row{display:flex;gap:8px;margin-top:6px}
+.phone-row select{width:120px;flex:none;margin-top:0}
+.phone-row input{margin-top:0!important}
+.sum-leg{padding:10px 0;border-bottom:1px solid var(--line)}
+.sl-row{display:flex;gap:10px;align-items:flex-start;margin-top:4px}
+.sl-row img{width:30px;height:30px;object-fit:contain;flex:none}
+.sl-row b{display:block;font-size:14px}
+.sl-row span{display:block;font-size:12.5px}
+.sum-leg.big .sl-row{margin:10px 0}
+.sum-fare{padding:10px 0}
+.sum-fare ul{list-style:none;font-size:13px;color:var(--ink-2);margin-top:4px;display:grid;gap:2px}
+@media (max-width:1020px){.fc-main{grid-template-columns:1fr}.fc-price{border-left:0;border-top:1px dashed var(--line);flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between}.fc-price .hbtn{width:auto}}
+@media (max-width:720px){
+  .leg{grid-template-columns:36px 62px minmax(0,1fr) 62px}
+  .lair{display:none}
+  .lt b{font-size:16px}
+  .co-row3{grid-template-columns:1fr}
+  .fl-sorts button{padding:10px}
+}

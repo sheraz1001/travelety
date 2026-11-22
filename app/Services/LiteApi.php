@@ -244,4 +244,167 @@ class LiteApi
 
         return $r['data'] ?? null;
     }
+
+    /* ======================= FLIGHTS ======================= */
+
+    /**
+     * Search flights. Returns ['hash'=>..,'journeys'=>[normalised], 'error'=>?].
+     * Raw offers are cached under the hash so offerIds never travel through the browser.
+     */
+    public function flightSearch(array $legs, int $adults, int $children, int $infants, string $cabin, string $currency, string $country): array
+    {
+        $body = [
+            'legs' => $legs, 'adults' => $adults, 'cabinClass' => $cabin, 'currency' => $currency, 'country' => $country,
+        ];
+        if ($children) {
+            $body['children'] = $children;
+            $body['childrenAges'] = array_fill(0, $children, 8);
+        }
+        if ($infants) {
+            $body['infants'] = $infants;
+            $body['infantAges'] = array_fill(0, $infants, 1);
+        }
+        $hash = substr(md5($this->mode().json_encode($body)), 0, 20);
+        $cached = Cache::get('lite.fl.'.$hash);
+        if ($cached) {
+            return ['hash' => $hash, 'journeys' => $cached['journeys'], 'error' => null];
+        }
+        $r = $this->call('POST', self::API.'/flights/rates', $body, 90);
+        if (! $r || isset($r['_error'])) {
+            return ['hash' => $hash, 'journeys' => [], 'error' => $r['_error'] ?? 'Flight search failed. Please try again.'];
+        }
+        $data = $r['data'][0] ?? [];
+        $offers = [];
+        $journeys = [];
+        foreach ($data['journeys'] ?? [] as $j) {
+            $n = $this->normJourney($j, $offers);
+            if ($n) {
+                $journeys[] = $n;
+            }
+        }
+        $best = $data['sortMetadata']['best']['journeyKey'] ?? null;
+        foreach ($journeys as &$jj) {
+            $jj['best'] = $jj['key'] === $best;
+        }
+        unset($jj);
+        // offers expire after ~10 minutes at the provider
+        Cache::put('lite.fl.'.$hash, ['journeys' => $journeys, 'offers' => $offers, 'body' => $body], now()->addMinutes(12));
+
+        return ['hash' => $hash, 'journeys' => $journeys, 'error' => null];
+    }
+
+    public function flightCached(string $hash): ?array
+    {
+        return Cache::get('lite.fl.'.$hash);
+    }
+
+    protected function normJourney(array $j, array &$offers): ?array
+    {
+        $segs = collect($j['segments'] ?? []);
+        if ($segs->isEmpty() || empty($j['offers'])) {
+            return null;
+        }
+        $legs = [];
+        foreach ($segs->groupBy(fn ($s) => $s['direction'] ?? 'OUTBOUND') as $dir => $ss) {
+            $ss = $ss->values();
+            $first = $ss->first();
+            $last = $ss->last();
+            $ld = collect($j['legDurations'] ?? [])->firstWhere('direction', $dir) ?? [];
+            $layovers = collect($j['connections'] ?? [])->where('direction', $dir)->map(fn ($c) => [
+                'code' => $c['arrivalAirportCode'] ?? '', 'name' => $c['arrivalAirportName'] ?? '',
+                'min' => $c['duration']['minutes'] ?? 0, 'changeAirport' => (bool) ($c['changeAirport'] ?? false), 'overnight' => (bool) ($c['overnight'] ?? false),
+            ])->values()->all();
+            $legs[] = [
+                'dir' => $dir,
+                'from' => $first['originCode'], 'fromName' => $first['originName'] ?? '',
+                'to' => $last['destinationCode'], 'toName' => $last['destinationName'] ?? '',
+                'dep' => $first['departureTime'], 'arr' => $last['arrivalTime'],
+                'min' => $ld['duration']['minutes'] ?? null,
+                'dayChange' => $ld['dayChange'] ?? 0,
+                'stops' => max(0, $ss->count() - 1) + $ss->sum(fn ($s) => $s['stopCount'] ?? 0),
+                'layovers' => $layovers,
+                'carriers' => $ss->map(fn ($s) => ['code' => $s['carrier']['marketingCode'] ?? '', 'name' => $s['carrier']['marketingName'] ?? '', 'logo' => $s['carrier']['marketingLogo'] ?? null])->unique('code')->values()->all(),
+                'segments' => $ss->map(fn ($s) => [
+                    'from' => $s['originCode'], 'fromName' => $s['originName'] ?? '', 'to' => $s['destinationCode'], 'toName' => $s['destinationName'] ?? '',
+                    'dep' => $s['departureTime'], 'arr' => $s['arrivalTime'], 'min' => $s['duration']['minutes'] ?? null,
+                    'flight' => ($s['carrier']['marketingCode'] ?? '').' '.($s['flight']['marketingNumber'] ?? ''),
+                    'airline' => $s['carrier']['marketingName'] ?? '', 'logo' => $s['carrier']['marketingLogo'] ?? null,
+                    'operatedBy' => ($s['carrier']['operatingCode'] ?? '') !== ($s['carrier']['marketingCode'] ?? '') ? ($s['carrier']['operatingName'] ?? null) : null,
+                ])->all(),
+            ];
+        }
+        $opts = [];
+        foreach ($j['offers'] as $o) {
+            $idx = count($offers);
+            $offers[$idx] = $o['offerId'];
+            $bag = $o['baggage'] ?? [];
+            $checked = collect($bag['included'] ?? [])->firstWhere('bagType', 'checked');
+            $cabinBag = collect($bag['included'] ?? [])->firstWhere('bagType', 'cabin');
+            $t = $o['terms'] ?? [];
+            $opts[] = [
+                'i' => $idx,
+                'total' => (float) ($o['pricing']['display']['total'] ?? 0),
+                'currency' => $o['pricing']['display']['currency'] ?? '',
+                'adult' => (float) ($o['pricing']['display']['perPassenger']['adult']['total'] ?? 0),
+                'family' => $o['fare']['family'] ?? 'Standard',
+                'seats' => $o['fare']['seatsRemaining'] ?? null,
+                'checked' => $checked ? ['pieces' => $checked['pieces'] ?? 1, 'kg' => $checked['weightKg'] ?? null] : null,
+                'cabinBag' => $cabinBag ? ['pieces' => $cabinBag['pieces'] ?? 1, 'kg' => $cabinBag['weightKg'] ?? null] : null,
+                'refundable' => (bool) ($t['refundable'] ?? false),
+                'changeable' => (bool) ($t['changeable'] ?? false),
+                'terms' => collect($t['summary'] ?? [])->pluck('message')->take(4)->values()->all(),
+                'seatSelect' => ($o['seats']['seatReservation']['status'] ?? '') !== 'not-offered',
+            ];
+        }
+        usort($opts, fn ($a, $b) => $a['total'] <=> $b['total']);
+
+        return [
+            'key' => $j['journeyKey'] ?? md5(json_encode($legs)),
+            'price' => $opts[0]['total'], 'currency' => $opts[0]['currency'],
+            'min' => $j['totalDuration']['minutes'] ?? collect($legs)->sum('min'),
+            'legs' => $legs, 'offers' => $opts,
+            'stops' => collect($legs)->max('stops'),
+            'airlines' => collect($legs)->pluck('carriers')->flatten(1)->unique('code')->values()->all(),
+        ];
+    }
+
+    public function flightPrebook(string $offerId, array $contact, array $passengers, array $meta = []): array
+    {
+        $r = $this->call('POST', self::API.'/flights/prebooks', array_filter([
+            'offerId' => $offerId, 'usePaymentSdk' => true, 'contact' => $contact, 'passengers' => $passengers,
+            'travelPurpose' => 'LEISURE', 'metadata' => $meta ?: null,
+        ]), 120);
+        if (isset($r['data'][0])) {
+            return ['data' => $r['data'][0]];
+        }
+
+        return ['error' => $r['_error'] ?? 'This fare is no longer available.', 'raw' => $r['_json'] ?? null];
+    }
+
+    public function flightBook(string $prebookId, string $transactionId, string $ref): array
+    {
+        $r = $this->call('POST', self::API.'/flights/bookings', [
+            'prebookId' => $prebookId, 'payment' => ['method' => 'TRANSACTION_ID', 'transactionId' => $transactionId],
+            'customTags' => ['REF' => $ref],
+        ], 150);
+        if (isset($r['data'][0])) {
+            return ['data' => $r['data'][0]];
+        }
+        if (isset($r['data']) && is_array($r['data']) && isset($r['data']['bookingId'])) {
+            return ['data' => $r['data']];
+        }
+
+        return ['error' => $r['_error'] ?? 'Ticketing could not be confirmed.', 'raw' => $r['_json'] ?? null];
+    }
+
+    public function flightBooking(string $bookingId): ?array
+    {
+        $r = $this->call('GET', self::API.'/flights/bookings/'.$bookingId, [], 30);
+        $x = $r['data'] ?? null;
+        if (is_array($x) && array_is_list($x)) {
+            $x = $x[0] ?? null;
+        }
+
+        return is_array($x) ? ($x['booking'] ?? $x) : null;
+    }
 }

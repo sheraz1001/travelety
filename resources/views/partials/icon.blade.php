@@ -27,6 +27,7 @@ $paths = [
  'taxi' => '<path d="M10 2h4M12 2v3"/><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><rect x="3" y="11" width="18" height="6" rx="2"/><path d="M5 17v2M19 17v2"/>',
  'left' => '<path d="m15 18-6-6 6-6"/>',
  'right' => '<path d="m9 18 6-6-6-6"/>',
+ 'swap' => '<path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/>',
  'menu' => '<path d="M3 6h18M3 12h18M3 18h18"/>',
 ];
 @endphp

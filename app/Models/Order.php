@@ -49,6 +49,7 @@ class Order extends Model
 
         return match ($this->type) {
             'esim' => ($d['name'] ?? 'eSIM').' eSIM · '.($d['data_label'] ?? '').' · '.($d['days'] ?? '').' days',
+            'flight' => 'Flight '.collect($d['journey']['legs'] ?? [])->map(fn ($l) => $l['from'].'–'.$l['to'])->implode(', '),
             'hotel' => ($d['hotel_name'] ?? 'Hotel').' · '.($d['nights'] ?? '').' nights',
             'transfer' => 'Transfer · '.($d['vehicle_label'] ?? '').' · '.($d['airport'] ?? ''),
             default => ucfirst($this->type),
@@ -62,6 +63,6 @@ class Order extends Model
 
     public function url(): string
     {
-        return $this->type === 'hotel' ? route('hotels.booking', $this) : route('orders.show', $this);
+        return match ($this->type) { 'hotel' => route('hotels.booking', $this), 'flight' => route('flights.booking', $this), default => route('orders.show', $this) };
     }
 }
